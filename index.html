@@ -183,6 +183,13 @@
   .rc-badge.na{background:var(--grey-bg);color:var(--grey-fg);}
   .rc-total-row td{font-weight:bold;background:var(--hilite);color:var(--navy);}
   .rc-note{font-size:10.5px;color:#889;margin:2px 0 14px;padding:0 2px;}
+  .rc-input{width:44px;padding:3px 2px;text-align:center;border-radius:8px;border:1px solid transparent;font-weight:bold;font-size:11.5px;font-family:Arial,sans-serif;}
+  .rc-input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .rc-input.sudah{background:var(--green-bg);color:var(--green);}
+  .rc-input.proses{background:var(--yellow-bg);color:var(--yellow-fg);}
+  .rc-input.belum{background:var(--red-bg);color:var(--red-fg);}
+  .rc-input.na{background:var(--grey-bg);color:var(--grey-fg);}
+  .rc-save-status{font-size:10px;font-weight:normal;opacity:.85;}
 
   footer{text-align:center;font-size:11px;color:#889;margin-top:20px;}
 
@@ -283,7 +290,7 @@
 
   <!-- ================= VIEW: RINCIAN STATUS PEMENUHAN ================= -->
   <div class="view" id="view-rincian">
-    <div class="rc-note">Rincian jumlah item checklist per aspek berdasarkan Status Pemenuhan (Sudah / Dalam Proses / Belum / N/A). Sumber: Checklist_Penilaian_Jasa_Pertambangan (Semester I 2026). Aspek bertanda N/A berarti di luar ruang lingkup penilaian mitra tersebut.</div>
+    <div class="rc-note">Rincian jumlah item checklist per aspek berdasarkan Status Pemenuhan (Sudah / Dalam Proses / Belum / N/A) — isi manual langsung di kolom tabel, tersimpan otomatis. Aspek bertanda N/A berarti di luar ruang lingkup penilaian mitra tersebut. <span id="rcSaveStatus" class="rc-save-status"></span></div>
     <div id="rcContainer"></div>
   </div>
 
@@ -725,12 +732,14 @@ const SK_SEED_NILAI = {
   "Visi Global Technology": { 1:0.00,  2:0.00,  4:0.00,  6:9.38,  7:100.00 },
   "Vixmo Solusi Cerdas":    { 1:18.75, 2:9.20,  4:8.33,  6:41.38, 7:50.00 },
   "Bening Guru Semesta":    { 1:0.00,  6:0.00 },
-  "Lintech Duta Pratama":   { 1:0.00,  2:0.00,  4:0.00,  6:0.00,  7:0.00 },
+  "Lintech Duta Pratama":   { 1:0.00,  2:0.00,  3:0.00,  4:0.00,  6:0.00,  7:0.00 },
 };
 
-/* ---- Rincian Status Pemenuhan per Aspek per Mitra (Checklist Sem I 2026) ---- */
+/* ---- Rincian Status Pemenuhan per Aspek per Mitra ---- */
+/* Pengisian dilakukan manual langsung dari tabel (input Sudah/Proses/Belum/N/A per aspek). */
+/* RINCIAN_DATA_DEFAULT hanya dipakai sebagai nilai awal saat belum ada data tersimpan utk mitra tsb. */
 const RINCIAN_ASPEK_LABELS = ["Teknis Operasional","Keselamatan Pertambangan (K3)","SMKP","Lingkungan Hidup","Konservasi","Standarisasi Usaha Jasa","Improvement"];
-const RINCIAN_DATA = {
+const RINCIAN_DATA_DEFAULT = {
   "Minergo Visi Maxima": [
     {sudah:5,proses:8,belum:0,na:0},
     {sudah:35,proses:15,belum:0,na:0},
@@ -770,7 +779,7 @@ const RINCIAN_DATA = {
   "Lintech Duta Pratama": [
     {sudah:0,proses:15,belum:7,na:6},
     {sudah:0,proses:51,belum:36,na:0},
-    null,
+    {sudah:0,proses:4,belum:0,na:1},
     {sudah:0,proses:10,belum:10,na:4},
     null,
     {sudah:0,proses:30,belum:2,na:0},
@@ -778,25 +787,82 @@ const RINCIAN_DATA = {
   ],
 };
 
+const RC_KEY = 'rincianStatusPemenuhan';
+let rcData = {};
+let rcSaveTimer = null;
+
+function rcDeepCopyDefault(){
+  const copy = {};
+  SK_VENDORS.forEach(v => {
+    copy[v] = (RINCIAN_DATA_DEFAULT[v] || RINCIAN_ASPEK_LABELS.map(()=>null)).map(r => r ? Object.assign({}, r) : null);
+  });
+  return copy;
+}
+
+async function loadRcData(){
+  try{
+    const res = await store.get(RC_KEY);
+    rcData = (res && res.value) ? JSON.parse(res.value) : rcDeepCopyDefault();
+  }catch(e){
+    rcData = rcDeepCopyDefault();
+  }
+  // Pastikan semua mitra & aspek punya slot (jaga-jaga kalau vendor/aspek baru ditambahkan nanti)
+  SK_VENDORS.forEach(v => {
+    if(!rcData[v]) rcData[v] = RINCIAN_ASPEK_LABELS.map(()=>null);
+  });
+}
+
+async function saveRcData(){
+  try{ await store.set(RC_KEY, JSON.stringify(rcData)); }catch(e){ console.error('Gagal menyimpan Rincian Status Pemenuhan', e); }
+  const el = document.getElementById('rcSaveStatus');
+  if(el){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    el.textContent = `Tersimpan pukul ${hh}:${mm}`;
+  }
+}
+function scheduleRcSave(){ clearTimeout(rcSaveTimer); rcSaveTimer = setTimeout(saveRcData, 500); }
+
+// Override khusus tampilan Rincian Status Pemenuhan (TIDAK mengubah bobot/ruang lingkup aspek
+// penilaian di Summary Kinerja PJP — hanya menyembunyikan kolom input di tabel ini menjadi
+// "N/A — di luar ruang lingkup" karena belum ada data checklist untuk aspek tsb).
+// Index aspek 0-based: 0 Teknis, 1 K3, 2 SMKP, 3 Lingkungan, 4 Konservasi, 5 Standarisasi, 6 Improvement.
+const RC_MANUAL_NA = {
+  "Bening Guru Semesta": [1, 3, 6]
+};
+
+function rcIsInScope(vendor, aspekIndex){
+  // aspekIndex 0-based -> aspek no 1-based sesuai SK_ASPECTS/override
+  const aspects = getSkAspects(vendor);
+  const a = aspects[aspekIndex];
+  if(!a || a.max <= 0) return false;
+  const manualNa = RC_MANUAL_NA[vendor];
+  if(manualNa && manualNa.includes(aspekIndex)) return false;
+  return true;
+}
+
 function renderRincian(){
   const el = document.getElementById('rcContainer');
   if(!el) return;
   el.innerHTML = SK_VENDORS.map(vendor => {
-    const rows = RINCIAN_DATA[vendor];
+    const rows = rcData[vendor] || RINCIAN_ASPEK_LABELS.map(()=>null);
     const bodyRows = rows.map((r, i) => {
-      if(!r){
+      if(!rcIsInScope(vendor, i)){
         return `<tr><td class="rc-aspek">${RINCIAN_ASPEK_LABELS[i]}</td><td class="rc-na" colspan="4">N/A — di luar ruang lingkup</td></tr>`;
       }
+      const v = r || {sudah:0,proses:0,belum:0,na:0};
+      const mk = (field) => `<input type="number" min="0" step="1" class="rc-input ${field}" data-vendor="${vendor}" data-aspek="${i}" data-field="${field}" value="${v[field]}">`;
       return `<tr>
         <td class="rc-aspek">${RINCIAN_ASPEK_LABELS[i]}</td>
-        <td><span class="rc-badge sudah">${r.sudah}</span></td>
-        <td><span class="rc-badge proses">${r.proses}</span></td>
-        <td><span class="rc-badge belum">${r.belum}</span></td>
-        <td><span class="rc-badge na">${r.na}</span></td>
+        <td>${mk('sudah')}</td>
+        <td>${mk('proses')}</td>
+        <td>${mk('belum')}</td>
+        <td>${mk('na')}</td>
       </tr>`;
     }).join('');
-    const totals = rows.reduce((acc, r) => {
-      if(r){ acc.sudah+=r.sudah; acc.proses+=r.proses; acc.belum+=r.belum; acc.na+=r.na; }
+    const totals = rows.reduce((acc, r, i) => {
+      if(rcIsInScope(vendor, i) && r){ acc.sudah+=(r.sudah||0); acc.proses+=(r.proses||0); acc.belum+=(r.belum||0); acc.na+=(r.na||0); }
       return acc;
     }, {sudah:0,proses:0,belum:0,na:0});
     return `<div class="rc-vendor-block">
@@ -804,11 +870,39 @@ function renderRincian(){
       <table class="rc-table">
         <thead><tr><th style="text-align:left;">Aspek Penilaian</th><th>Sudah</th><th>Dalam Proses</th><th>Belum</th><th>N/A</th></tr></thead>
         <tbody>${bodyRows}
-          <tr class="rc-total-row"><td class="rc-aspek">Total</td><td>${totals.sudah}</td><td>${totals.proses}</td><td>${totals.belum}</td><td>${totals.na}</td></tr>
+          <tr class="rc-total-row" data-vendor-total="${vendor}"><td class="rc-aspek">Total</td><td class="rc-tot-sudah">${totals.sudah}</td><td class="rc-tot-proses">${totals.proses}</td><td class="rc-tot-belum">${totals.belum}</td><td class="rc-tot-na">${totals.na}</td></tr>
         </tbody>
       </table>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.rc-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const vendor = inp.dataset.vendor;
+      const aspekIdx = Number(inp.dataset.aspek);
+      const field = inp.dataset.field;
+      const val = Math.max(0, parseInt(inp.value, 10) || 0);
+      if(!rcData[vendor]) rcData[vendor] = RINCIAN_ASPEK_LABELS.map(()=>null);
+      if(!rcData[vendor][aspekIdx]) rcData[vendor][aspekIdx] = {sudah:0,proses:0,belum:0,na:0};
+      rcData[vendor][aspekIdx][field] = val;
+      rcUpdateVendorTotal(vendor);
+      scheduleRcSave();
+    });
+  });
+}
+
+function rcUpdateVendorTotal(vendor){
+  const rows = rcData[vendor] || [];
+  const totals = rows.reduce((acc, r, i) => {
+    if(rcIsInScope(vendor, i) && r){ acc.sudah+=(r.sudah||0); acc.proses+=(r.proses||0); acc.belum+=(r.belum||0); acc.na+=(r.na||0); }
+    return acc;
+  }, {sudah:0,proses:0,belum:0,na:0});
+  const row = document.querySelector(`.rc-total-row[data-vendor-total="${vendor}"]`);
+  if(!row) return;
+  row.querySelector('.rc-tot-sudah').textContent = totals.sudah;
+  row.querySelector('.rc-tot-proses').textContent = totals.proses;
+  row.querySelector('.rc-tot-belum').textContent = totals.belum;
+  row.querySelector('.rc-tot-na').textContent = totals.na;
 }
 
 /* ---- Google Sheets auto-sync ---- */
@@ -985,9 +1079,10 @@ async function loadSkData(){
   }catch(e){
     skData = { semester:"I", tahun:2026, pjo:"", nilai:{} };
   }
-  if(!skData.nilai || Object.keys(skData.nilai).length === 0){
-    const seed = SK_SEED_NILAI[skVendor];
-    if(seed) skData.nilai = Object.assign({}, seed);
+  // Auto-seed dari SK_SEED_NILAI dimatikan atas permintaan — Nilai Awal Summary Kinerja PJP
+  // untuk seluruh mitra (MVM, VGT, VSC, BGS, LDP) diisi manual satu per satu.
+  if(!skData.nilai){
+    skData.nilai = {};
   }
 }
 
@@ -1019,6 +1114,7 @@ async function renderSummaryKinerja(){
   await loadSkNextDates();
   renderNcVendorSelectOptions();
   loadEditableLabels();
+  await loadRcData();
   renderRincian();
   renderSummaryKinerja();
 })();
