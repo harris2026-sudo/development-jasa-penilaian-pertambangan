@@ -743,60 +743,65 @@ const SK_SEED_NILAI = {
   "Lintech Duta Pratama":   { 1:0.00,  2:0.00,  4:0.00,  6:0.00,  7:0.00 },
 };
 
-/* ---- Rincian Status Pemenuhan per Aspek per Mitra (Checklist Sem I 2026) ---- */
+/* ---- Rincian Status Pemenuhan per Aspek per Mitra ---- */
+/* Data di bawah diperbarui berdasarkan file referensi
+   "Checklist_Penilaian_Jasa_Pertambangan_v5.xlsx" (Semester I 2026). */
 const RINCIAN_ASPEK_LABELS = ["Teknis Operasional","Keselamatan Pertambangan (K3)","SMKP","Lingkungan Hidup","Konservasi","Standarisasi Usaha Jasa","Improvement"];
 const RINCIAN_DATA = {
   "Minergo Visi Maxima": [
-    {sudah:5,proses:8,belum:0,na:0},
-    {sudah:35,proses:15,belum:0,na:0},
+    {sudah:5,proses:9,belum:0,na:0},
+    {sudah:35,proses:15,belum:0,na:5},
     null,
     {sudah:7,proses:1,belum:3,na:5},
     null,
-    {sudah:10,proses:22,belum:0,na:0},
+    {sudah:10,proses:23,belum:0,na:0},
     {sudah:0,proses:8,belum:0,na:0},
   ],
   "Visi Global Technology": [
-    {sudah:0,proses:0,belum:28,na:0},
+    {sudah:0,proses:0,belum:28,na:1},
     {sudah:0,proses:0,belum:87,na:0},
     null,
     {sudah:0,proses:0,belum:24,na:0},
     null,
-    {sudah:3,proses:1,belum:28,na:0},
+    {sudah:3,proses:1,belum:29,na:0},
     {sudah:8,proses:0,belum:0,na:0},
   ],
   "Vixmo Solusi Cerdas": [
-    {sudah:3,proses:10,belum:3,na:13},
+    {sudah:3,proses:10,belum:2,na:14},
     {sudah:8,proses:42,belum:37,na:0},
     null,
     {sudah:2,proses:6,belum:16,na:0},
     null,
-    {sudah:12,proses:5,belum:12,na:3},
+    {sudah:12,proses:5,belum:13,na:3},
     {sudah:4,proses:3,belum:1,na:0},
   ],
   "Bening Guru Semesta": [
-    {sudah:0,proses:0,belum:28,na:0},
+    {sudah:0,proses:0,belum:28,na:1},
     null,
     null,
     null,
     null,
-    {sudah:0,proses:0,belum:32,na:0},
+    {sudah:0,proses:0,belum:33,na:0},
     null,
   ],
   "Lintech Duta Pratama": [
-    {sudah:0,proses:15,belum:7,na:6},
+    {sudah:0,proses:15,belum:7,na:7},
     {sudah:0,proses:51,belum:36,na:0},
-    {sudah:0,proses:0,belum:0,na:0},
+    {sudah:0,proses:4,belum:0,na:1},
     {sudah:0,proses:10,belum:10,na:4},
     null,
-    {sudah:0,proses:30,belum:2,na:0},
+    {sudah:0,proses:31,belum:2,na:0},
     {sudah:0,proses:8,belum:0,na:0},
   ],
 };
 
 /* rcData adalah salinan RINCIAN_DATA yang bisa ditimpa oleh hasil Sync dari Spreadsheet
-   dan disimpan ke storage. RINCIAN_DATA (di atas) tetap sebagai data cadangan/awal. */
+   dan disimpan ke storage. RINCIAN_DATA (di atas) tetap sebagai data cadangan/awal.
+   Kunci penyimpanan dinaikkan ke v2 supaya data lama yang sempat tersimpan salah
+   (mis. seluruhnya 0) tidak lagi menimpa data referensi terbaru ini. */
 let rcData = JSON.parse(JSON.stringify(RINCIAN_DATA));
-const RC_DATA_KEY = 'rincian:data';
+const RC_DATA_KEY = 'rincian:data:v2';
+
 
 async function loadRincianData(){
   try{
