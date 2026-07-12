@@ -277,8 +277,18 @@
           <tr><td>Nilai ≤ 50</td><td class="p-Hitam">Hitam</td></tr>
         </tbody>
       </table>
-      <div class="sk-note light-editable" contenteditable="true" data-label-key="skNoteText">Nilai Awal &amp; Nilai Akhir diisi manual per aspek (0–100), atau otomatis via Sync dari Spreadsheet. Nilai Overall = Σ(Bobot × Nilai) / Σ(Bobot aspek yang terisi). Aspek Konservasi selalu N/A (di luar ruang lingkup). Aspek SMKP N/A untuk sebagian besar vendor, kecuali Lintech Duta Pratama (bobot 15%). Aspek lain yang dikosongkan (belum ada data pemenuhan) juga dianggap N/A dan tidak mengurangi Nilai Overall.</div>
     </div>
+
+    <div class="section-title">📅 Riwayat Penilaian per Tahun — <span id="skHistoryVendorName"></span></div>
+    <div class="sk-table-wrap">
+      <table class="sk-table">
+        <thead>
+          <tr><th>Tahun</th><th>Semester</th><th>PJO</th><th>Nilai Overall</th><th>Predikat</th></tr>
+        </thead>
+        <tbody id="skHistoryBody"></tbody>
+      </table>
+    </div>
+    <div class="sk-note" style="margin:-10px 0 14px;">Riwayat ini otomatis terekam tiap kali Semester/Tahun diganti dan data disimpan, sehingga kinerja tiap mitra bisa direview dari tahun ke tahun. Baris yang sedang aktif ditandai warna.</div>
   </div>
 
   <!-- ================= VIEW: RINCIAN STATUS PEMENUHAN ================= -->
@@ -775,7 +785,7 @@ const RINCIAN_DATA = {
   "Lintech Duta Pratama": [
     {sudah:0,proses:15,belum:7,na:6},
     {sudah:0,proses:51,belum:36,na:0},
-    null,
+    {sudah:0,proses:0,belum:0,na:0},
     {sudah:0,proses:10,belum:10,na:4},
     null,
     {sudah:0,proses:30,belum:2,na:0},
@@ -797,6 +807,12 @@ async function loadRincianData(){
   }
   // jaga-jaga bila ada vendor baru yang belum tersimpan di rcData
   SK_VENDORS.forEach(v => { if(!rcData[v]) rcData[v] = JSON.parse(JSON.stringify(RINCIAN_DATA[v] || RINCIAN_ASPEK_LABELS.map(()=>null))); });
+  // Migrasi: Aspek SMKP (indeks 2) khusus utk Lintech Duta Pratama ada dalam ruang lingkup
+  // penilaian (lihat SK_ASPECT_OVERRIDES), jadi jangan biarkan tampil sbg N/A meski data
+  // tersimpan sebelumnya (sesi lama) masih menyimpannya sebagai null.
+  if(rcData["Lintech Duta Pratama"] && !rcData["Lintech Duta Pratama"][2]){
+    rcData["Lintech Duta Pratama"][2] = {sudah:0,proses:0,belum:0,na:0};
+  }
 }
 async function saveRincianData(){
   try{ await store.set(RC_DATA_KEY, JSON.stringify(rcData)); }
@@ -918,7 +934,22 @@ async function skSyncFromSheet(){
   }
 }
 
-function skKeyFor(vendor){ return 'summaryKinerja:' + vendor; }
+/* Kunci penyimpanan sekarang per Vendor + Tahun + Semester, sehingga data
+   Semester I dan Semester II (dan tahun-tahun berbeda) tersimpan terpisah
+   dan tidak saling menimpa. Format lama (per vendor saja) tetap didukung
+   sebagai fallback migrasi data yang sudah ada sebelumnya. */
+function skKeyFor(vendor, tahun, semester){ return 'summaryKinerja:' + vendor + ':' + tahun + ':' + semester; }
+function skLegacyKeyFor(vendor){ return 'summaryKinerja:' + vendor; }
+
+// Periode yang sedang aktif dimuat ke dalam skData (dipakai saat menyimpan)
+let skLoadedTahun = 2026;
+let skLoadedSemester = 'I';
+
+function skCurrentPeriodInputs(){
+  const tahun = parseInt(document.getElementById('skTahun').value, 10) || 2026;
+  const semester = document.getElementById('skSemester').value || 'I';
+  return { tahun, semester };
+}
 
 function skPredikat(nilai){
   if(nilai > 90) return 'Emas';
@@ -928,11 +959,11 @@ function skPredikat(nilai){
   return 'Hitam';
 }
 
-function skComputeOverall(){
+function skComputeOverallFor(vendor, data){
   let sumWeighted = 0, sumBobot = 0;
-  getSkAspects(skVendor).forEach(a => {
+  getSkAspects(vendor).forEach(a => {
     if(a.max === 0) return; // Aspek N/A untuk vendor ini, di luar ruang lingkup
-    const v = skData.nilai[a.no];
+    const v = data.nilai ? data.nilai[a.no] : undefined;
     if(v === undefined || v === null || v === '') return; // Aspek belum ada data -> N/A, tidak masuk perhitungan
     const nilai = Number(v) || 0;
     sumWeighted += a.bobot * nilai;
@@ -940,6 +971,7 @@ function skComputeOverall(){
   });
   return sumBobot > 0 ? Math.round((sumWeighted / sumBobot) * 100) / 100 : 0;
 }
+function skComputeOverall(){ return skComputeOverallFor(skVendor, skData); }
 
 function renderSkVendorTabs(){
   const el = document.getElementById('skVendorTabs');
@@ -947,7 +979,11 @@ function renderSkVendorTabs(){
   el.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       if(e.target.classList.contains('vt-label') && document.activeElement === e.target) return;
-      skVendor = btn.dataset.v; await loadSkData(); renderSummaryKinerjaUI(); skSyncFromSheet();
+      const { tahun, semester } = skCurrentPeriodInputs();
+      skVendor = btn.dataset.v;
+      await loadSkData(skVendor, tahun, semester);
+      renderSummaryKinerjaUI();
+      skSyncFromSheet();
     });
   });
   bindVendorLabelEditing(el);
@@ -997,23 +1033,100 @@ function renderSkResult(){
 let skSaveTimer = null;
 function scheduleSkSave(){ clearTimeout(skSaveTimer); skSaveTimer = setTimeout(saveSkData, 500); }
 async function saveSkData(){
-  skData.semester = document.getElementById('skSemester').value;
-  skData.tahun = document.getElementById('skTahun').value;
   skData.pjo = document.getElementById('skPjo').value;
-  try{ await store.set(skKeyFor(skVendor), JSON.stringify(skData)); }
+  skData.tahun = skLoadedTahun;
+  skData.semester = skLoadedSemester;
+  try{
+    await store.set(skKeyFor(skVendor, skLoadedTahun, skLoadedSemester), JSON.stringify(skData));
+    renderSkHistory();
+  }
   catch(e){ console.error('Gagal menyimpan summary kinerja', e); }
 }
-async function loadSkData(){
+
+async function loadSkData(vendor, tahun, semester){
+  let data = null;
   try{
-    const res = await store.get(skKeyFor(skVendor));
-    skData = (res && res.value) ? JSON.parse(res.value) : { semester:"I", tahun:2026, pjo:"", nilai:{} };
-  }catch(e){
-    skData = { semester:"I", tahun:2026, pjo:"", nilai:{} };
+    const res = await store.get(skKeyFor(vendor, tahun, semester));
+    data = (res && res.value) ? JSON.parse(res.value) : null;
+  }catch(e){ data = null; }
+
+  let migrated = false;
+  if(!data && String(tahun) === '2026' && semester === 'I'){
+    // Belum ada data pada format baru untuk periode default -> coba data lama (format sebelum
+    // ada pemisahan semester/tahun), lalu migrasikan ke format baru.
+    try{
+      const legacy = await store.get(skLegacyKeyFor(vendor));
+      if(legacy && legacy.value){ data = JSON.parse(legacy.value); migrated = true; }
+    }catch(e){ /* tidak ada data lama, lanjut seperti biasa */ }
   }
-  if(!skData.nilai || Object.keys(skData.nilai).length === 0){
-    const seed = SK_SEED_NILAI[skVendor];
-    if(seed) skData.nilai = Object.assign({}, seed);
+
+  if(!data) data = { semester, tahun, pjo:"", nilai:{} };
+  data.semester = semester;
+  data.tahun = tahun;
+
+  if((!data.nilai || Object.keys(data.nilai).length === 0) && String(tahun) === '2026' && semester === 'I'){
+    const seed = SK_SEED_NILAI[vendor];
+    if(seed) data.nilai = Object.assign({}, seed);
   }
+
+  skData = data;
+  skVendor = vendor;
+  skLoadedTahun = tahun;
+  skLoadedSemester = semester;
+
+  if(migrated) await saveSkData();
+}
+
+/* ---- Riwayat Penilaian per Tahun (per mitra) ---- */
+async function skGetHistory(vendor){
+  const prefix = 'summaryKinerja:' + vendor + ':';
+  let keys = [];
+  try{
+    const res = await store.list(prefix);
+    keys = (res && res.keys) || [];
+  }catch(e){ keys = []; }
+
+  const items = [];
+  for(const k of keys){
+    const rest = k.slice(prefix.length);
+    const parts = rest.split(':');
+    if(parts.length !== 2) continue;
+    const tahun = parseInt(parts[0], 10);
+    const semester = parts[1];
+    if(!tahun || (semester !== 'I' && semester !== 'II')) continue;
+    try{
+      const res = await store.get(k);
+      if(!res || !res.value) continue;
+      const d = JSON.parse(res.value);
+      const overall = skComputeOverallFor(vendor, d);
+      items.push({ tahun, semester, overall, predikat: skPredikat(overall), pjo: d.pjo || '' });
+    }catch(e){ /* lewati entri yang rusak */ }
+  }
+  items.sort((a,b) => a.tahun !== b.tahun ? a.tahun - b.tahun : (a.semester === b.semester ? 0 : (a.semester === 'I' ? -1 : 1)));
+  return items;
+}
+
+async function renderSkHistory(){
+  const nameEl = document.getElementById('skHistoryVendorName');
+  if(nameEl) nameEl.textContent = vendorDisplay(skVendor);
+  const body = document.getElementById('skHistoryBody');
+  if(!body) return;
+  body.innerHTML = `<tr><td colspan="5" style="color:#999;">Memuat riwayat…</td></tr>`;
+  const items = await skGetHistory(skVendor);
+  if(items.length === 0){
+    body.innerHTML = `<tr><td colspan="5" style="color:#999;">Belum ada riwayat penilaian tersimpan untuk mitra ini.</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(it => {
+    const isCurrent = (it.tahun === skLoadedTahun && it.semester === skLoadedSemester);
+    return `<tr${isCurrent ? ' style="background:var(--hilite);"' : ''}>
+      <td>${it.tahun}</td>
+      <td>Semester ${it.semester}</td>
+      <td>${it.pjo || '-'}</td>
+      <td class="sk-total">${it.overall.toFixed(2)}</td>
+      <td><span class="sk-predikat ${it.predikat}" style="font-size:11px;padding:4px 10px;">${it.predikat.toUpperCase()}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 function renderSummaryKinerjaUI(){
@@ -1025,15 +1138,28 @@ function renderSummaryKinerjaUI(){
   renderSkNextDate();
   renderSkTable();
   renderSkResult();
+  renderSkHistory();
 }
 
-document.getElementById('skSemester').onchange = scheduleSkSave;
-document.getElementById('skTahun').oninput = scheduleSkSave;
+// Saat Semester atau Tahun diganti, simpan dulu data periode yang sedang aktif,
+// baru muat data untuk periode (tahun+semester) yang baru dipilih.
+async function onSkPeriodChange(){
+  clearTimeout(skSaveTimer);
+  await saveSkData(); // simpan data periode lama sebelum berpindah
+  const { tahun, semester } = skCurrentPeriodInputs();
+  await loadSkData(skVendor, tahun, semester);
+  renderSummaryKinerjaUI();
+}
+
+document.getElementById('skSemester').onchange = onSkPeriodChange;
+document.getElementById('skTahun').onchange = onSkPeriodChange;
 document.getElementById('skPjo').oninput = scheduleSkSave;
 document.getElementById('skSyncBtn').onclick = skSyncFromSheet;
 
+
 async function renderSummaryKinerja(){
-  await loadSkData();
+  const { tahun, semester } = skCurrentPeriodInputs();
+  await loadSkData(skVendor, tahun, semester);
   renderSummaryKinerjaUI();
   skSyncFromSheet();
 }
