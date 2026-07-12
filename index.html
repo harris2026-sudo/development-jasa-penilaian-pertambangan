@@ -353,6 +353,44 @@
 
 <script>
 /* ---------------- STORAGE LAYER (auto fallback) ---------------- */
+// Deteksi apakah localStorage benar-benar bisa dipakai (bisa gagal dengan
+// SecurityError "opaque origin" saat file dibuka langsung via file:// atau
+// ditampilkan dalam iframe/preview yang di-sandbox tanpa allow-same-origin).
+function detectLocalStorageAvailable(){
+  try{
+    const testKey = '__storage_test__' + Date.now();
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+const localStorageAvailable = detectLocalStorageAvailable();
+
+// Fallback terakhir: penyimpanan di memori (hilang saat tab ditutup/refresh).
+// Dipakai HANYA kalau localStorage benar-benar tidak bisa diakses, supaya
+// aplikasi tetap jalan (tidak error) walau data tidak persisten.
+const memoryStore = {};
+const memoryFallback = {
+  async get(key){
+    if(!(key in memoryStore)) throw new Error('not found');
+    return { key, value: memoryStore[key], shared: false };
+  },
+  async set(key, value){
+    memoryStore[key] = value;
+    return { key, value, shared: false };
+  },
+  async delete(key){
+    delete memoryStore[key];
+    return { key, deleted: true, shared: false };
+  },
+  async list(prefix=''){
+    const keys = Object.keys(memoryStore).filter(k => k.startsWith(prefix));
+    return { keys, prefix, shared: false };
+  }
+};
+
 const localFallback = {
   async get(key){
     const v = localStorage.getItem(key);
@@ -373,7 +411,25 @@ const localFallback = {
   }
 };
 const usingClaudeStorage = (typeof window.storage !== 'undefined' && typeof window.storage.get === 'function');
-const store = usingClaudeStorage ? window.storage : localFallback;
+const store = usingClaudeStorage ? window.storage : (localStorageAvailable ? localFallback : memoryFallback);
+
+// Tampilkan banner peringatan kalau tidak ada penyimpanan permanen yang bisa dipakai,
+// supaya user TAHU datanya tidak akan tersimpan (bukan silent fail di console saja).
+function showStorageWarningBanner(){
+  const banner = document.createElement('div');
+  banner.id = 'storageWarningBanner';
+  banner.style.cssText = 'position:sticky;top:0;z-index:9999;background:#fef3c7;color:#92400e;'
+    + 'padding:10px 16px;font-size:13px;font-weight:600;text-align:center;'
+    + 'border-bottom:2px solid #f59e0b;box-shadow:0 2px 6px rgba(0,0,0,.08);';
+  banner.innerHTML = '⚠️ Penyimpanan permanen tidak tersedia di mode ini (localStorage diblokir browser). '
+    + 'Data yang diinput <u>TIDAK akan tersimpan</u> setelah tab ditutup/refresh. '
+    + 'Solusi: buka file ini via server/hosting (mis. GitHub Pages), jangan dobel-klik file HTML langsung. '
+    + '<span style="cursor:pointer;text-decoration:underline;margin-left:8px;" onclick="this.parentElement.remove()">Tutup</span>';
+  document.body.insertBefore(banner, document.body.firstChild);
+}
+if(!usingClaudeStorage && !localStorageAvailable){
+  document.addEventListener('DOMContentLoaded', showStorageWarningBanner);
+}
 
 function todayStr(){
   const d = new Date();
@@ -587,7 +643,10 @@ async function loadNcPjp(){
 }
 async function saveNcPjp(){
   try{ await store.set(NC_KEY, JSON.stringify(ncItems)); }
-  catch(e){ console.error('Gagal menyimpan NC PJP', e); }
+  catch(e){
+    console.error('Gagal menyimpan NC PJP', e);
+    alert('Gagal menyimpan data NC PJP ke penyimpanan. Data hanya tampil sementara di layar dan TIDAK tersimpan permanen.\n\nDetail: ' + e.message);
+  }
 }
 
 document.getElementById('ncAddBtn').onclick = async () => {
