@@ -184,6 +184,13 @@
   .fu-card .fu-desc{font-size:13px;color:#222;font-weight:bold;margin-bottom:4px;}
   .fu-card .fu-meta{font-size:11px;color:#667;}
   .fu-card .fu-note{font-size:12px;color:#556;margin-top:6px;}
+  .select-with-actions{display:flex;gap:4px;}
+  .select-with-actions select{flex:1;min-width:0;}
+  .icon-btn{border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;padding:0 9px;font-family:Arial;flex-shrink:0;}
+  .icon-btn-add{background:var(--hilite);color:var(--navy);}
+  .icon-btn-add:hover{background:#c3d7ee;}
+  .icon-btn-del{background:var(--red-bg);color:var(--red-fg);}
+  .icon-btn-del:hover{background:#f8b3bc;}
   .fu-badge{display:inline-block;font-size:10.5px;font-weight:bold;padding:3px 10px;border-radius:12px;white-space:nowrap;}
   .fu-badge.Open{background:var(--blue-bg);color:var(--blue-fg);}
   .fu-badge.Onprogress{background:var(--yellow-bg);color:var(--yellow-fg);}
@@ -358,14 +365,13 @@
         </div>
         <div class="f-small">
           <label>Vendor</label>
-          <select id="fuVendor">
-            <option value="">-</option>
-            <option>MVM</option>
-            <option>VGT</option>
-            <option>Vixmo</option>
-            <option>BGS</option>
-            <option>Internal</option>
-          </select>
+          <div class="select-with-actions">
+            <select id="fuVendor">
+              <option value="">-</option>
+            </select>
+            <button type="button" class="icon-btn icon-btn-add" id="fuVendorAddBtn" title="Tambah vendor baru">＋</button>
+            <button type="button" class="icon-btn icon-btn-del" id="fuVendorDelBtn" title="Hapus vendor terpilih dari daftar">🗑</button>
+          </div>
         </div>
         <div class="f-small">
           <label>PIC</label>
@@ -1927,6 +1933,55 @@ const FOLLOWUP_KEY = 'followup:list';
 let followUpItems = [];
 let followUpFilter = 'All';
 
+/* ---- Daftar Vendor (dropdown Follow Up) - bisa ditambah/dihapus dari UI ---- */
+const VENDOR_LIST_KEY = 'followup:vendors';
+const DEFAULT_VENDORS = ['MVM','VGT','Vixmo','BGS','Internal'];
+let vendorList = [...DEFAULT_VENDORS];
+
+async function loadVendorList(){
+  try{
+    const res = await store.get(VENDOR_LIST_KEY);
+    const parsed = (res && res.value) ? JSON.parse(res.value) : null;
+    vendorList = (Array.isArray(parsed) && parsed.length > 0) ? parsed : [...DEFAULT_VENDORS];
+  }catch(e){ vendorList = [...DEFAULT_VENDORS]; }
+}
+async function saveVendorList(){
+  try{ await store.set(VENDOR_LIST_KEY, JSON.stringify(vendorList)); }
+  catch(e){ console.error('Gagal menyimpan daftar vendor', e); }
+}
+function renderVendorOptions(selectedValue){
+  const sel = document.getElementById('fuVendor');
+  const current = selectedValue !== undefined ? selectedValue : sel.value;
+  sel.innerHTML = '<option value="">-</option>' + vendorList.map(v =>
+    `<option ${v === current ? 'selected' : ''}>${v}</option>`
+  ).join('');
+}
+
+document.getElementById('fuVendorAddBtn').onclick = async () => {
+  const name = prompt('Nama vendor baru:');
+  if(name === null) return;
+  const trimmed = name.trim();
+  if(!trimmed){ return; }
+  if(vendorList.some(v => v.toLowerCase() === trimmed.toLowerCase())){
+    alert(`Vendor "${trimmed}" sudah ada di daftar.`);
+    renderVendorOptions(trimmed);
+    return;
+  }
+  vendorList.push(trimmed);
+  await saveVendorList();
+  renderVendorOptions(trimmed);
+};
+
+document.getElementById('fuVendorDelBtn').onclick = async () => {
+  const sel = document.getElementById('fuVendor');
+  const current = sel.value;
+  if(!current){ alert('Pilih dulu vendor yang ingin dihapus dari daftar dropdown.'); return; }
+  if(!confirm(`Hapus "${current}" dari daftar dropdown Vendor?\n\nData follow up yang sudah tersimpan sebelumnya dengan vendor ini tidak akan berubah/hilang.`)) return;
+  vendorList = vendorList.filter(v => v !== current);
+  await saveVendorList();
+  renderVendorOptions('');
+};
+
 function fuId(){ return 'fu' + Date.now() + Math.floor(Math.random()*1000); }
 
 async function loadFollowUp(){
@@ -2047,6 +2102,8 @@ document.getElementById('dateInput').value = todayStr();
   await loadHiddenState();
   await loadCustomCategories();
   await loadHiddenCategories();
+  await loadVendorList();
+  renderVendorOptions('');
   rebuildTaskIndex();
   buildUI();
   loadForDate(todayStr());
