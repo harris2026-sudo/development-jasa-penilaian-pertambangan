@@ -68,6 +68,10 @@
   .summary .card{background:#fff;border-radius:10px;padding:10px 6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08);}
   .summary .card .num{font-size:20px;font-weight:bold;color:var(--navy);}
   .summary .card .lab{font-size:9.5px;color:#667;margin-top:2px;text-transform:uppercase;letter-spacing:.3px;}
+  .summary .card.clickable{cursor:pointer;transition:transform .15s ease, box-shadow .15s ease;}
+  .summary .card.clickable:hover{box-shadow:0 3px 10px rgba(0,0,0,.14);transform:translateY(-2px);}
+  .summary .card.clickable.active{background:var(--navy);box-shadow:0 0 0 2px var(--navy);}
+  .summary .card.clickable.active .num, .summary .card.clickable.active .lab{color:#fff;}
 
   .progress-wrap{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
   .progress-wrap .top{display:flex;justify-content:space-between;font-size:12px;font-weight:bold;color:var(--navy);margin-bottom:6px;}
@@ -191,6 +195,22 @@
   .icon-btn-add:hover{background:#c3d7ee;}
   .icon-btn-del{background:var(--red-bg);color:var(--red-fg);}
   .icon-btn-del:hover{background:#f8b3bc;}
+
+  /* Modal Kelola Vendor */
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,30,45,.55);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px;}
+  .modal-overlay.active{display:flex;}
+  .modal-box{background:#fff;border-radius:14px;max-width:420px;width:100%;max-height:82vh;overflow-y:auto;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3);position:relative;}
+  .modal-box h3{margin:0 0 14px;color:var(--navy);font-size:16px;padding-right:20px;}
+  .modal-close-x{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:#889;line-height:1;padding:2px;}
+  .modal-close-x:hover{color:var(--red-fg);}
+  .vendor-add-row{display:flex;gap:8px;margin-bottom:12px;}
+  .vendor-add-row input{flex:1;border:1px solid #c7d3e0;border-radius:6px;padding:9px 10px;font-size:13px;font-family:Arial;}
+  .vendor-item-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+  .vendor-item{display:flex;justify-content:space-between;align-items:center;background:var(--zebra);border-radius:8px;padding:8px 10px;font-size:13px;color:#223;}
+  .vendor-item .vendor-item-del{background:var(--red-bg);color:var(--red-fg);border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:bold;cursor:pointer;font-family:Arial;flex-shrink:0;}
+  .vendor-item .vendor-item-del:hover{background:#f8b3bc;}
+  .vendor-item .vendor-item-del.confirming{background:var(--red-fg);color:#fff;}
+  .vendor-empty-note{font-size:12px;color:#889;text-align:center;padding:10px 0;}
   .fu-badge{display:inline-block;font-size:10.5px;font-weight:bold;padding:3px 10px;border-radius:12px;white-space:nowrap;}
   .fu-badge.Open{background:var(--blue-bg);color:var(--blue-fg);}
   .fu-badge.Onprogress{background:var(--yellow-bg);color:var(--yellow-fg);}
@@ -369,24 +389,17 @@
             <select id="fuVendor">
               <option value="">-</option>
             </select>
-            <button type="button" class="icon-btn icon-btn-add" id="fuVendorAddBtn" title="Tambah vendor baru">＋</button>
-            <button type="button" class="icon-btn icon-btn-del" id="fuVendorDelBtn" title="Hapus vendor terpilih dari daftar">🗑</button>
+            <button type="button" class="icon-btn icon-btn-add" id="fuVendorManageBtn" title="Kelola daftar vendor (tambah/hapus)">⚙️</button>
           </div>
-          <div class="add-task-form hidden" id="fuVendorAddForm" style="margin-top:6px;">
-            <input type="text" id="fuVendorNewInput" placeholder="Nama vendor baru, lalu Enter">
-            <button type="button" class="btn btn-primary" id="fuVendorAddSaveBtn" style="padding:8px 12px;">Simpan</button>
-            <button type="button" class="btn btn-ghost" id="fuVendorAddCancelBtn" style="padding:8px 12px;">Batal</button>
-          </div>
-          <div class="hidden-chip-bar" id="fuVendorDelConfirm" style="display:none;background:var(--red-bg);color:var(--red-fg);border-radius:6px;padding:8px 10px;margin-top:6px;">
-            Hapus <b id="fuVendorDelName"></b> dari daftar dropdown?
-            <button type="button" class="btn" id="fuVendorDelYesBtn" style="background:var(--red-fg);color:#fff;padding:6px 10px;margin-left:6px;">Ya, Hapus</button>
-            <button type="button" class="btn btn-ghost" id="fuVendorDelNoBtn" style="padding:6px 10px;margin-left:4px;">Batal</button>
-          </div>
-          <div id="fuVendorMsg" style="display:none;font-size:11px;color:var(--red-fg);margin-top:5px;font-weight:bold;"></div>
         </div>
         <div class="f-small">
           <label>PIC</label>
-          <input type="text" id="fuPic" placeholder="Nama PIC">
+          <div class="select-with-actions">
+            <select id="fuPic">
+              <option value="">-</option>
+            </select>
+            <button type="button" class="icon-btn icon-btn-add" id="fuPicManageBtn" title="Kelola daftar PIC (tambah/hapus)">⚙️</button>
+          </div>
         </div>
         <div class="f-small">
           <label>Due Date</label>
@@ -417,6 +430,40 @@
     </div>
 
   </div>
+
+  <!-- ================= MODAL: KELOLA VENDOR ================= -->
+  <div class="modal-overlay" id="vendorModalOverlay">
+    <div class="modal-box">
+      <button type="button" class="modal-close-x" id="vendorModalCloseBtn" title="Tutup">✕</button>
+      <h3>🏷️ Kelola Daftar Vendor</h3>
+      <div class="vendor-add-row">
+        <input type="text" id="vendorModalInput" placeholder="Nama vendor baru...">
+        <button type="button" class="btn btn-primary" id="vendorModalAddBtn">+ Tambah</button>
+      </div>
+      <div id="vendorModalMsg" style="display:none;font-size:11.5px;color:var(--red-fg);font-weight:bold;margin-bottom:8px;"></div>
+      <div class="vendor-item-list" id="vendorModalList"></div>
+      <div style="text-align:right;margin-top:14px;">
+        <button type="button" class="btn btn-ghost" id="vendorModalDoneBtn">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: KELOLA PIC ================= -->
+  <div class="modal-overlay" id="picModalOverlay">
+    <div class="modal-box">
+      <button type="button" class="modal-close-x" id="picModalCloseBtn" title="Tutup">✕</button>
+      <h3>👤 Kelola Daftar PIC</h3>
+      <div class="vendor-add-row">
+        <input type="text" id="picModalInput" placeholder="Nama PIC baru...">
+        <button type="button" class="btn btn-primary" id="picModalAddBtn">+ Tambah</button>
+      </div>
+      <div id="picModalMsg" style="display:none;font-size:11.5px;color:var(--red-fg);font-weight:bold;margin-bottom:8px;"></div>
+      <div class="vendor-item-list" id="picModalList"></div>
+      <div style="text-align:right;margin-top:14px;">
+        <button type="button" class="btn btn-ghost" id="picModalDoneBtn">Selesai</button>
+      </div>
+    </div>
+  </div>
   <!-- ================= VIEW: REKAP ================= -->
   <div class="view" id="view-rekap">
     <div class="rekap-modeselect">
@@ -433,6 +480,11 @@
     </div>
 
     <div class="summary" id="rekapSummaryCards"></div>
+
+    <div id="rekapStatusDetailWrap" style="display:none;margin-bottom:14px;">
+      <div class="section-title" id="rekapStatusDetailTitle"></div>
+      <div id="rekapStatusDetailList"></div>
+    </div>
 
     <div id="rekapDetail"></div>
 
@@ -1723,7 +1775,23 @@ async function renderRekap(){
   await renderFollowList(periodDates);
 }
 
+/* ---- Warna badge per status checklist, dipakai untuk daftar detail interaktif ---- */
+const STATUS_DETAIL_COLOR = {
+  "Checked":     { bg:'var(--green-bg)',  fg:'var(--green)' },
+  "Follow up":   { bg:'var(--yellow-bg)', fg:'#7A6000' },
+  "Continue":    { bg:'var(--blue-bg)',   fg:'var(--blue-fg)' },
+  "Not yet":     { bg:'var(--red-bg)',    fg:'var(--red-fg)' },
+  "Information": { bg:'var(--grey-bg)',   fg:'var(--grey-fg)' },
+  "n/a":         { bg:'var(--grey-bg)',   fg:'var(--grey-fg)' }
+};
+let rekapStatusFilter = null;
+let rekapStatusPeriodDates = [];
+
 function renderAggregateSummary(periodDates){
+  rekapStatusPeriodDates = periodDates;
+  rekapStatusFilter = null; // reset seleksi tiap kali periode (minggu/bulan/tahun/tanggal) berubah
+  document.getElementById('rekapStatusDetailWrap').style.display = 'none';
+
   const counts = {}; STATUS_OPTIONS.forEach(s=>counts[s]=0);
   let sumChecked=0, sumApplicable=0, daysWithData=0;
   periodDates.forEach(d => {
@@ -1740,9 +1808,64 @@ function renderAggregateSummary(periodDates){
   document.getElementById('rekapAvgFill').style.width = avgPct + '%';
   document.getElementById('rekapAvgLabel').textContent = `Rata-rata penyelesaian (${daysWithData} hari terisi)`;
 
-  const cardsHtml = STATUS_OPTIONS.map(s => `<div class="card"><div class="num">${counts[s]}</div><div class="lab">${s}</div></div>`).join('')
+  const cardsHtml = STATUS_OPTIONS.map(s => `<div class="card clickable" data-status="${s}"><div class="num">${counts[s]}</div><div class="lab">${s}</div></div>`).join('')
     + `<div class="card"><div class="num">${daysWithData}</div><div class="lab">Hari Terisi</div></div>`;
-  document.getElementById('rekapSummaryCards').innerHTML = cardsHtml;
+  const cardsEl = document.getElementById('rekapSummaryCards');
+  cardsEl.innerHTML = cardsHtml;
+
+  cardsEl.querySelectorAll('.card.clickable').forEach(card => {
+    card.onclick = () => {
+      const status = card.dataset.status;
+      rekapStatusFilter = (rekapStatusFilter === status) ? null : status;
+      cardsEl.querySelectorAll('.card.clickable').forEach(c => c.classList.toggle('active', c.dataset.status === rekapStatusFilter));
+      renderRekapStatusDetail();
+    };
+  });
+}
+
+function renderRekapStatusDetail(){
+  const wrap = document.getElementById('rekapStatusDetailWrap');
+  if(!rekapStatusFilter){ wrap.style.display = 'none'; return; }
+
+  const status = rekapStatusFilter;
+  const items = [];
+  rekapStatusPeriodDates.forEach(d => {
+    const entry = allEntriesCache[d];
+    if(!entry || !entry.status) return;
+    Object.keys(entry.status).forEach(taskId => {
+      if(entry.status[taskId] === status){
+        items.push({ date: d, taskId, note: (entry.notes && entry.notes[taskId]) || '' });
+      }
+    });
+  });
+  items.sort((a,b) => a.date.localeCompare(b.date));
+
+  document.getElementById('rekapStatusDetailTitle').textContent = `📋 Detail status "${status}" — ${items.length} item pada periode ini`;
+  const listEl = document.getElementById('rekapStatusDetailList');
+  const color = STATUS_DETAIL_COLOR[status] || { bg:'var(--hilite)', fg:'var(--navy)' };
+  if(items.length === 0){
+    listEl.innerHTML = '<div class="empty-note">Tidak ada item dengan status ini pada periode ini.</div>';
+  }else{
+    listEl.innerHTML = items.map(it => `
+      <div class="fu-card" style="border-left-color:${color.fg};cursor:pointer;" data-date="${it.date}">
+        <div class="fu-desc"><span class="fi-date">${it.date}</span>${taskTextMap[it.taskId] || it.taskId}</div>
+        ${it.note ? `<div class="fu-note">${it.note}</div>` : ''}
+      </div>
+    `).join('');
+    // Klik item detail langsung buka laporan harian tanggal tsb (konsisten dgn baris Detail Harian)
+    listEl.querySelectorAll('.fu-card[data-date]').forEach(row => {
+      row.onclick = () => {
+        const d = row.dataset.date;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="harian"]').classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-harian').classList.add('active');
+        document.getElementById('dateInput').value = d;
+        loadForDate(d);
+      };
+    });
+  }
+  wrap.style.display = 'block';
 }
 
 function dayLabel(dateStr){
@@ -1944,90 +2067,145 @@ const FOLLOWUP_KEY = 'followup:list';
 let followUpItems = [];
 let followUpFilter = 'All';
 
-/* ---- Daftar Vendor (dropdown Follow Up) - bisa ditambah/dihapus dari UI ---- */
-const VENDOR_LIST_KEY = 'followup:vendors';
-const DEFAULT_VENDORS = ['MVM','VGT','Vixmo','BGS','Internal'];
-let vendorList = [...DEFAULT_VENDORS];
+/* ---- Daftar terkelola (dropdown + modal tambah/hapus) untuk Vendor & PIC ---- */
+function createManagedList(opts){
+  const { storageKey, defaults, selectId, manageBtnId, modalOverlayId, modalInputId, modalAddBtnId,
+          modalCloseBtnId, modalDoneBtnId, modalListId, modalMsgId, itemLabel } = opts;
+  let list = [...defaults];
 
-async function loadVendorList(){
-  try{
-    const res = await store.get(VENDOR_LIST_KEY);
-    const parsed = (res && res.value) ? JSON.parse(res.value) : null;
-    vendorList = (Array.isArray(parsed) && parsed.length > 0) ? parsed : [...DEFAULT_VENDORS];
-  }catch(e){ vendorList = [...DEFAULT_VENDORS]; }
-}
-async function saveVendorList(){
-  try{ await store.set(VENDOR_LIST_KEY, JSON.stringify(vendorList)); }
-  catch(e){ console.error('Gagal menyimpan daftar vendor', e); }
-}
-function renderVendorOptions(selectedValue){
-  const sel = document.getElementById('fuVendor');
-  const current = selectedValue !== undefined ? selectedValue : sel.value;
-  sel.innerHTML = '<option value="">-</option>' + vendorList.map(v =>
-    `<option ${v === current ? 'selected' : ''}>${v}</option>`
-  ).join('');
-}
-
-function showVendorMsg(text){
-  const msg = document.getElementById('fuVendorMsg');
-  msg.textContent = text;
-  msg.style.display = 'block';
-  clearTimeout(showVendorMsg._t);
-  showVendorMsg._t = setTimeout(() => { msg.style.display = 'none'; }, 3500);
-}
-
-document.getElementById('fuVendorAddBtn').onclick = () => {
-  document.getElementById('fuVendorDelConfirm').style.display = 'none';
-  document.getElementById('fuVendorMsg').style.display = 'none';
-  const form = document.getElementById('fuVendorAddForm');
-  form.classList.toggle('hidden');
-  if(!form.classList.contains('hidden')){
-    const input = document.getElementById('fuVendorNewInput');
+  async function load(){
+    try{
+      const res = await store.get(storageKey);
+      const parsed = (res && res.value) ? JSON.parse(res.value) : null;
+      list = (Array.isArray(parsed) && parsed.length > 0) ? parsed : [...defaults];
+    }catch(e){ list = [...defaults]; }
+  }
+  async function save(){
+    try{ await store.set(storageKey, JSON.stringify(list)); }
+    catch(e){ console.error('Gagal menyimpan daftar ' + itemLabel, e); }
+  }
+  function renderOptions(selectedValue){
+    const sel = document.getElementById(selectId);
+    const current = selectedValue !== undefined ? selectedValue : sel.value;
+    sel.innerHTML = '<option value="">-</option>' + list.map(v =>
+      `<option ${v === current ? 'selected' : ''}>${v}</option>`
+    ).join('');
+  }
+  function showMsg(text){
+    const msg = document.getElementById(modalMsgId);
+    msg.textContent = text;
+    msg.style.display = 'block';
+    clearTimeout(showMsg._t);
+    showMsg._t = setTimeout(() => { msg.style.display = 'none'; }, 3500);
+  }
+  function renderModalList(){
+    const el = document.getElementById(modalListId);
+    if(list.length === 0){
+      el.innerHTML = `<div class="vendor-empty-note">Belum ada ${itemLabel}. Tambahkan lewat kolom di atas.</div>`;
+      return;
+    }
+    el.innerHTML = list.map(v => `
+      <div class="vendor-item" data-v="${v}">
+        <span>${v}</span>
+        <button type="button" class="vendor-item-del" data-v="${v}">Hapus</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.vendor-item-del').forEach(btn => {
+      btn.onclick = async () => {
+        if(!btn.classList.contains('confirming')){
+          el.querySelectorAll('.vendor-item-del.confirming').forEach(b => { b.classList.remove('confirming'); b.textContent = 'Hapus'; });
+          btn.classList.add('confirming');
+          btn.textContent = 'Yakin?';
+          clearTimeout(btn._resetT);
+          btn._resetT = setTimeout(() => { btn.classList.remove('confirming'); btn.textContent = 'Hapus'; }, 2500);
+          return;
+        }
+        const name = btn.dataset.v;
+        list = list.filter(v => v !== name);
+        await save();
+        renderOptions('');
+        renderModalList();
+      };
+    });
+  }
+  async function submitNew(){
+    const input = document.getElementById(modalInputId);
+    const trimmed = input.value.trim();
+    if(!trimmed){ input.focus(); return; }
+    if(list.some(v => v.toLowerCase() === trimmed.toLowerCase())){
+      showMsg(`${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} "${trimmed}" sudah ada di daftar.`);
+      input.value = '';
+      input.focus();
+      return;
+    }
+    list.push(trimmed);
+    await save();
+    renderOptions(trimmed);
+    renderModalList();
     input.value = '';
     input.focus();
   }
-};
-document.getElementById('fuVendorAddCancelBtn').onclick = () => {
-  document.getElementById('fuVendorAddForm').classList.add('hidden');
-};
-async function submitNewVendor(){
-  const input = document.getElementById('fuVendorNewInput');
-  const trimmed = input.value.trim();
-  if(!trimmed){ input.focus(); return; }
-  if(vendorList.some(v => v.toLowerCase() === trimmed.toLowerCase())){
-    showVendorMsg(`Vendor "${trimmed}" sudah ada di daftar.`);
-    renderVendorOptions(trimmed);
-    document.getElementById('fuVendorAddForm').classList.add('hidden');
-    return;
+  function openModal(){
+    document.getElementById(modalOverlayId).classList.add('active');
+    renderModalList();
+    document.getElementById(modalInputId).value = '';
+    document.getElementById(modalMsgId).style.display = 'none';
+    setTimeout(() => document.getElementById(modalInputId).focus(), 50);
   }
-  vendorList.push(trimmed);
-  await saveVendorList();
-  renderVendorOptions(trimmed);
-  document.getElementById('fuVendorAddForm').classList.add('hidden');
-}
-document.getElementById('fuVendorAddSaveBtn').onclick = submitNewVendor;
-document.getElementById('fuVendorNewInput').addEventListener('keydown', (e) => {
-  if(e.key === 'Enter'){ e.preventDefault(); submitNewVendor(); }
-});
+  function closeModal(){
+    document.getElementById(modalOverlayId).classList.remove('active');
+  }
 
-document.getElementById('fuVendorDelBtn').onclick = () => {
-  document.getElementById('fuVendorAddForm').classList.add('hidden');
-  const sel = document.getElementById('fuVendor');
-  const current = sel.value;
-  if(!current){ showVendorMsg('Pilih dulu vendor yang ingin dihapus dari daftar dropdown.'); return; }
-  document.getElementById('fuVendorDelName').textContent = current;
-  document.getElementById('fuVendorDelConfirm').style.display = 'block';
-};
-document.getElementById('fuVendorDelNoBtn').onclick = () => {
-  document.getElementById('fuVendorDelConfirm').style.display = 'none';
-};
-document.getElementById('fuVendorDelYesBtn').onclick = async () => {
-  const current = document.getElementById('fuVendor').value;
-  vendorList = vendorList.filter(v => v !== current);
-  await saveVendorList();
-  renderVendorOptions('');
-  document.getElementById('fuVendorDelConfirm').style.display = 'none';
-};
+  document.getElementById(manageBtnId).onclick = openModal;
+  document.getElementById(modalCloseBtnId).onclick = closeModal;
+  document.getElementById(modalDoneBtnId).onclick = closeModal;
+  document.getElementById(modalAddBtnId).onclick = submitNew;
+  document.getElementById(modalInputId).addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); submitNew(); }
+  });
+  document.getElementById(modalOverlayId).addEventListener('click', (e) => {
+    if(e.target.id === modalOverlayId) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && document.getElementById(modalOverlayId).classList.contains('active')) closeModal();
+  });
+
+  return { load, renderOptions };
+}
+
+const vendorManager = createManagedList({
+  storageKey: 'followup:vendors',
+  defaults: ['MVM','VGT','Vixmo','BGS','Internal'],
+  selectId: 'fuVendor',
+  manageBtnId: 'fuVendorManageBtn',
+  modalOverlayId: 'vendorModalOverlay',
+  modalInputId: 'vendorModalInput',
+  modalAddBtnId: 'vendorModalAddBtn',
+  modalCloseBtnId: 'vendorModalCloseBtn',
+  modalDoneBtnId: 'vendorModalDoneBtn',
+  modalListId: 'vendorModalList',
+  modalMsgId: 'vendorModalMsg',
+  itemLabel: 'vendor'
+});
+async function loadVendorList(){ await vendorManager.load(); }
+function renderVendorOptions(v){ vendorManager.renderOptions(v); }
+
+const picManager = createManagedList({
+  storageKey: 'followup:pics',
+  defaults: ['Harris','Nico Fahryan Sandy','Lukman Gunawan','Taufik Wirayudha','Adhe Setiawan'],
+  selectId: 'fuPic',
+  manageBtnId: 'fuPicManageBtn',
+  modalOverlayId: 'picModalOverlay',
+  modalInputId: 'picModalInput',
+  modalAddBtnId: 'picModalAddBtn',
+  modalCloseBtnId: 'picModalCloseBtn',
+  modalDoneBtnId: 'picModalDoneBtn',
+  modalListId: 'picModalList',
+  modalMsgId: 'picModalMsg',
+  itemLabel: 'PIC'
+});
+async function loadPicList(){ await picManager.load(); }
+function renderPicOptions(v){ picManager.renderOptions(v); }
 
 function fuId(){ return 'fu' + Date.now() + Math.floor(Math.random()*1000); }
 
@@ -2151,6 +2329,8 @@ document.getElementById('dateInput').value = todayStr();
   await loadHiddenCategories();
   await loadVendorList();
   renderVendorOptions('');
+  await loadPicList();
+  renderPicOptions('');
   rebuildTaskIndex();
   buildUI();
   loadForDate(todayStr());
