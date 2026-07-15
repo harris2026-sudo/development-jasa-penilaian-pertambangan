@@ -372,6 +372,17 @@
             <button type="button" class="icon-btn icon-btn-add" id="fuVendorAddBtn" title="Tambah vendor baru">＋</button>
             <button type="button" class="icon-btn icon-btn-del" id="fuVendorDelBtn" title="Hapus vendor terpilih dari daftar">🗑</button>
           </div>
+          <div class="add-task-form hidden" id="fuVendorAddForm" style="margin-top:6px;">
+            <input type="text" id="fuVendorNewInput" placeholder="Nama vendor baru, lalu Enter">
+            <button type="button" class="btn btn-primary" id="fuVendorAddSaveBtn" style="padding:8px 12px;">Simpan</button>
+            <button type="button" class="btn btn-ghost" id="fuVendorAddCancelBtn" style="padding:8px 12px;">Batal</button>
+          </div>
+          <div class="hidden-chip-bar" id="fuVendorDelConfirm" style="display:none;background:var(--red-bg);color:var(--red-fg);border-radius:6px;padding:8px 10px;margin-top:6px;">
+            Hapus <b id="fuVendorDelName"></b> dari daftar dropdown?
+            <button type="button" class="btn" id="fuVendorDelYesBtn" style="background:var(--red-fg);color:#fff;padding:6px 10px;margin-left:6px;">Ya, Hapus</button>
+            <button type="button" class="btn btn-ghost" id="fuVendorDelNoBtn" style="padding:6px 10px;margin-left:4px;">Batal</button>
+          </div>
+          <div id="fuVendorMsg" style="display:none;font-size:11px;color:var(--red-fg);margin-top:5px;font-weight:bold;"></div>
         </div>
         <div class="f-small">
           <label>PIC</label>
@@ -1957,29 +1968,65 @@ function renderVendorOptions(selectedValue){
   ).join('');
 }
 
-document.getElementById('fuVendorAddBtn').onclick = async () => {
-  const name = prompt('Nama vendor baru:');
-  if(name === null) return;
-  const trimmed = name.trim();
-  if(!trimmed){ return; }
+function showVendorMsg(text){
+  const msg = document.getElementById('fuVendorMsg');
+  msg.textContent = text;
+  msg.style.display = 'block';
+  clearTimeout(showVendorMsg._t);
+  showVendorMsg._t = setTimeout(() => { msg.style.display = 'none'; }, 3500);
+}
+
+document.getElementById('fuVendorAddBtn').onclick = () => {
+  document.getElementById('fuVendorDelConfirm').style.display = 'none';
+  document.getElementById('fuVendorMsg').style.display = 'none';
+  const form = document.getElementById('fuVendorAddForm');
+  form.classList.toggle('hidden');
+  if(!form.classList.contains('hidden')){
+    const input = document.getElementById('fuVendorNewInput');
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('fuVendorAddCancelBtn').onclick = () => {
+  document.getElementById('fuVendorAddForm').classList.add('hidden');
+};
+async function submitNewVendor(){
+  const input = document.getElementById('fuVendorNewInput');
+  const trimmed = input.value.trim();
+  if(!trimmed){ input.focus(); return; }
   if(vendorList.some(v => v.toLowerCase() === trimmed.toLowerCase())){
-    alert(`Vendor "${trimmed}" sudah ada di daftar.`);
+    showVendorMsg(`Vendor "${trimmed}" sudah ada di daftar.`);
     renderVendorOptions(trimmed);
+    document.getElementById('fuVendorAddForm').classList.add('hidden');
     return;
   }
   vendorList.push(trimmed);
   await saveVendorList();
   renderVendorOptions(trimmed);
-};
+  document.getElementById('fuVendorAddForm').classList.add('hidden');
+}
+document.getElementById('fuVendorAddSaveBtn').onclick = submitNewVendor;
+document.getElementById('fuVendorNewInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){ e.preventDefault(); submitNewVendor(); }
+});
 
-document.getElementById('fuVendorDelBtn').onclick = async () => {
+document.getElementById('fuVendorDelBtn').onclick = () => {
+  document.getElementById('fuVendorAddForm').classList.add('hidden');
   const sel = document.getElementById('fuVendor');
   const current = sel.value;
-  if(!current){ alert('Pilih dulu vendor yang ingin dihapus dari daftar dropdown.'); return; }
-  if(!confirm(`Hapus "${current}" dari daftar dropdown Vendor?\n\nData follow up yang sudah tersimpan sebelumnya dengan vendor ini tidak akan berubah/hilang.`)) return;
+  if(!current){ showVendorMsg('Pilih dulu vendor yang ingin dihapus dari daftar dropdown.'); return; }
+  document.getElementById('fuVendorDelName').textContent = current;
+  document.getElementById('fuVendorDelConfirm').style.display = 'block';
+};
+document.getElementById('fuVendorDelNoBtn').onclick = () => {
+  document.getElementById('fuVendorDelConfirm').style.display = 'none';
+};
+document.getElementById('fuVendorDelYesBtn').onclick = async () => {
+  const current = document.getElementById('fuVendor').value;
   vendorList = vendorList.filter(v => v !== current);
   await saveVendorList();
   renderVendorOptions('');
+  document.getElementById('fuVendorDelConfirm').style.display = 'none';
 };
 
 function fuId(){ return 'fu' + Date.now() + Math.floor(Math.random()*1000); }
