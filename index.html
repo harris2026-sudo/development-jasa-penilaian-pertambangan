@@ -574,6 +574,7 @@
   <footer>Maintain. Monitor. Improve. — Digitech Monitoring Team</footer>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 /* ============================================================
    KONFIGURASI BACKEND STORAGE
@@ -596,24 +597,25 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0EpZSa7vIfM4C
    di Google Sheet "Order Form (Responses)" (hasil Google Form),
    lalu otomatis memasukkannya ke menu Follow Up + notifikasi.
 
+   Pakai endpoint publik Google Sheets (gviz -> CSV) yang 100% GRATIS,
+   TIDAK perlu Google Cloud Console / API key / billing sama sekali.
+
    CARA ISI (sekali saja):
    1. Buka Google Sheet Order Form Responses-nya, cek nama TAB di
       bagian bawah sheet (defaultnya biasanya "Form Responses 1").
       Sesuaikan ORDERFORM_SHEET_NAME kalau beda.
-   2. Set sharing sheet tsb ke "Anyone with the link" - Viewer
-      (atau "Anyone in [organisasi]" kalau pakai Google Workspace),
-      supaya bisa dibaca lewat Google Sheets API tanpa login.
-   3. Buat API Key di Google Cloud Console (aktifkan "Google Sheets
-      API" dulu), lalu batasi API key tsb hanya untuk Sheets API +
-      HTTP referrer domain tempat dashboard ini di-hosting (mis. GitHub
-      Pages kamu), supaya aman. Paste key-nya ke ORDERFORM_API_KEY.
+   2. Set sharing sheet tsb (tombol "Share" di kanan atas Sheet) ke
+      "Anyone with the link" - Viewer. Ini juga gratis, cuma pengaturan
+      biasa di Google Sheets, BUKAN Google Cloud/API key.
    ============================================================ */
 const ORDERFORM_SHEET_ID = "1kP86KEjRVE1caOJAVHzvq_Pql402H_ersXWTIwYKtuw";
 const ORDERFORM_SHEET_NAME = "Form Responses 1"; // <-- sesuaikan jika nama tab berbeda
-const ORDERFORM_API_KEY = ""; // <-- WAJIB DIISI: API Key Google Sheets API (read-only)
-const ORDERFORM_RANGE = ORDERFORM_SHEET_NAME + "!A2:K"; // A2 supaya baris header (row 1) dilewati
 const ORDERFORM_LASTROW_KEY = "orderform:lastrow";
 const ORDERFORM_POLL_MS = 90000; // interval cek otomatis: 90 detik
+function orderformCsvUrl(){
+  return `https://docs.google.com/spreadsheets/d/${ORDERFORM_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(ORDERFORM_SHEET_NAME)}&_t=${Date.now()}`;
+}
+
 
 /* ---------------- STORAGE LAYER (backend Google Sheets via Apps Script) ---------------- */
 function requireStorageConfig(){
@@ -2607,23 +2609,23 @@ async function renderFollowUp(){
 }
 
 /* ---------------- SINKRON ORDER FORM -> FOLLOW UP ---------------- */
-/* Membaca baris baru dari Google Sheet "Order Form (Responses)" lewat Google
-   Sheets API (read-only, pakai API key), lalu mengubah tiap baris baru jadi
-   item Follow Up otomatis + notifikasi interaktif. Posisi baris terakhir yang
-   sudah diproses disimpan di backend (key ORDERFORM_LASTROW_KEY) supaya tidak
+/* Membaca baris baru dari Google Sheet "Order Form (Responses)" lewat endpoint
+   publik gviz (CSV) — GRATIS, tanpa API key/billing. Syaratnya cuma sheet-nya
+   di-share "Anyone with the link - Viewer". Tiap baris baru diubah jadi item
+   Follow Up otomatis + notifikasi interaktif. Posisi baris terakhir yang sudah
+   diproses disimpan di backend (key ORDERFORM_LASTROW_KEY) supaya tidak
    dobel-proses dan tetap sinkron antar device/anggota tim. */
 
-function orderFormConfigured(){ return !!ORDERFORM_API_KEY; }
-
 async function fetchOrderFormRows(){
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${ORDERFORM_SHEET_ID}/values/${encodeURIComponent(ORDERFORM_RANGE)}?key=${ORDERFORM_API_KEY}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(orderformCsvUrl(), { cache: 'no-store' });
   if(!res.ok){
-    const body = await res.json().catch(()=>null);
-    throw new Error((body && body.error && body.error.message) || ('HTTP ' + res.status));
+    throw new Error('HTTP ' + res.status + ' — pastikan sharing sheet sudah "Anyone with the link - Viewer" dan nama tab (ORDERFORM_SHEET_NAME) sudah benar.');
   }
-  const data = await res.json();
-  return data.values || [];
+  const csvText = await res.text();
+  if(!csvText || !csvText.trim()) return [];
+  const parsed = Papa.parse(csvText.trim(), { skipEmptyLines: false });
+  const allRows = parsed.data || [];
+  return allRows.slice(1); // baris 0 = header, dibuang
 }
 
 function mapOrderFormStatus(s){
@@ -2678,10 +2680,6 @@ function setOrderformSyncInfo(text){
 
 async function syncOrderForm(opts){
   opts = opts || {};
-  if(!orderFormConfigured()){
-    setOrderformSyncInfo('⚠️ Sinkron Order Form belum dikonfigurasi (isi ORDERFORM_API_KEY di script).');
-    return;
-  }
   const btn = document.getElementById('orderformSyncBtn');
   if(btn && !opts.silent){ btn.disabled = true; btn.textContent = '🔄 Mengecek...'; }
   try{
