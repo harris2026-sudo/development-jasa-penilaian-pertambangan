@@ -1150,9 +1150,9 @@ let rosterLoaded = false;
 const ROSTER_HELPER_SHEET_ID = '1EPmkh20M7ptGBnlWIM73GxkgAtvumhNL';
 const ROSTER_HELPER_GID = '2120640525';
 const ROSTER_HELPER_PERSONNEL = [
-  { code:'Ferdy', color:'#B45309' },
-  { code:'Wahyu', color:'#0F766E' },
-  { code:'Alam',  color:'#6D28D9' }
+  { code:'Ferdy', name:'Ferdy', color:'#B45309' },
+  { code:'Wahyu', name:'Wahyu', color:'#0F766E' },
+  { code:'Alam',  name:'Alam',  color:'#6D28D9' }
 ];
 const ROSTER_HELPER_SHIFT_DEFS = [
   { key:'shift1', label:'Shift 1', start:'06:00', end:'18:00' },
@@ -1211,13 +1211,22 @@ function rosterHelperPersonColor(code){
   }
   return '#5B6B7C';
 }
+function rosterHelperPersonName(code){
+  if(!code || code === '-') return code;
+  const parts = code.split('/').map(s => s.trim());
+  if(parts.length === 1){
+    const p = ROSTER_HELPER_PERSONNEL.find(p => p.code === parts[0]);
+    if(p) return p.name;
+  }
+  return code;
+}
 function rosterHelperAvatarHTML(code, size){
   const s = size || 44;
   if(!code || code === '-'){
     return `<div class="roster-avatar roster-avatar-empty" style="width:${s}px;height:${s}px;">–</div>`;
   }
   const color = rosterHelperPersonColor(code);
-  const initial = code.trim().slice(0,1).toUpperCase();
+  const initial = rosterHelperPersonName(code).trim().slice(0,1).toUpperCase();
   return `<div class="roster-avatar roster-avatar-initial" style="width:${s}px;height:${s}px;background:${color};border-color:${color}">${initial}</div>`;
 }
 function isHelperShiftActiveNow(shiftKey, now){
@@ -1611,21 +1620,33 @@ function renderShiftNowGrid(rec, now){
 }
 function renderHelperCard(today, now){
   const helperRec = rosterHelperDays.find(d => sameDay(d.date, today));
-  const rows = ROSTER_HELPER_SHIFT_DEFS.map(def => {
+  const cards = ROSTER_HELPER_SHIFT_DEFS.map(def => {
     const code = helperRec ? helperRec[def.key] : '-';
     const hasPerson = code && code !== '-';
     const isLive = isHelperShiftActiveNow(def.key, now);
-    return `<div class="roster-shift-row${isLive ? '' : ' muted'}">
-      ${rosterHelperAvatarHTML(code, 32)}
-      <span class="roster-shift-label" style="flex:0 0 170px;">${def.label} (${def.start}\u2013${def.end})${isLive ? ' <span style="color:#1E7A34;font-weight:bold;">\u25CF ONDUTY</span>' : ''}</span>
-      <span class="roster-shift-name">${hasPerson ? code : 'Belum ada data'}</span>
-    </div>`;
+    const titleKey = 'helperShiftTitle_' + def.key;
+    const defaultTitle = `${def.label} — ${def.start}\u2013${def.end}`;
+    const titleText = rosterLabelText(titleKey, defaultTitle);
+    return `
+      <div class="roster-shiftnow-card ${isLive ? 'is-live' : ''}">
+        <div class="roster-shiftnow-top">
+          <div>
+            <div class="roster-shiftnow-label roster-editable-label" contenteditable="true" data-rkey="${titleKey}">${titleText}</div>
+          </div>
+          <span class="roster-live-badge"><span class="roster-live-dot"></span>ONDUTY</span>
+        </div>
+        <div class="roster-shiftnow-person">
+          ${rosterHelperAvatarHTML(code, isLive ? 56 : 44)}
+          <div>
+            <div class="roster-shiftnow-name">${hasPerson ? rosterHelperPersonName(code) : '–'}</div>
+            <div class="roster-shiftnow-code">${hasPerson ? code : 'Belum ada data'}</div>
+          </div>
+        </div>
+      </div>`;
   }).join('');
-  return `<div class="roster-daycard">
-    <div class="roster-daycard-date roster-editable-label" contenteditable="true" data-rkey="label_helperTitle">${rosterLabelText('label_helperTitle','\u{1F9F0} Roster Helper')}</div>
-    <div class="roster-daycard-shifts">${rows}</div>
-    ${!helperRec ? `<div class="roster-shift-row muted" style="border-top:1px solid var(--zebra);">Tidak ada data Helper untuk hari ini di sheet.</div>` : ''}
-  </div>`;
+  return `<div class="roster-daycard-date roster-editable-label" contenteditable="true" data-rkey="label_helperTitle" style="margin-top:16px;margin-bottom:10px;">${rosterLabelText('label_helperTitle','\u{1F9F0} Roster Helper')}</div>
+    <div class="roster-shiftnow-grid">${cards}</div>
+    ${!helperRec ? `<div class="roster-empty" style="margin-bottom:12px;">Tidak ada data Helper untuk hari ini di sheet.</div>` : ''}`;
 }
 function rosterTodayCard(rec, highlight){
   return `
@@ -1643,7 +1664,7 @@ function rosterTodayCard(rec, highlight){
           return ROSTER_HELPER_SHIFT_DEFS.map(def => {
             const code = h[def.key];
             if(!code || code === '-') return '';
-            return `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper ${def.label}</span><span class="roster-cell-badge" style="background:${rosterHelperPersonColor(code)}">${code}</span></div>`;
+            return `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper ${def.label}</span><span class="roster-cell-badge" style="background:${rosterHelperPersonColor(code)}">${code}</span><span class="roster-shift-name">${rosterHelperPersonName(code)}</span></div>`;
           }).join('');
         })()}
       </div>
