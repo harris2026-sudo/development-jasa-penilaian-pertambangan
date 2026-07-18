@@ -1150,9 +1150,9 @@ let rosterLoaded = false;
 const ROSTER_HELPER_SHEET_ID = '1EPmkh20M7ptGBnlWIM73GxkgAtvumhNL';
 const ROSTER_HELPER_GID = '2120640525';
 const ROSTER_HELPER_PERSONNEL = [
-  { code:'Ferdy', name:'Ferdy', color:'#B45309' },
-  { code:'Wahyu', name:'Wahyu', color:'#0F766E' },
-  { code:'Alam',  name:'Alam',  color:'#6D28D9' }
+  { code:'Ferdy', shortCode:'FJR', name:'Ferdy Julian Siregar',      color:'#B45309' },
+  { code:'Wahyu', shortCode:'WH',  name:'Wahyu',                     color:'#0F766E' },
+  { code:'Alam',  shortCode:'MRA', name:'Muhammad Rizki Alamsyah',   color:'#6D28D9' }
 ];
 const ROSTER_HELPER_SHIFT_DEFS = [
   { key:'shift1', label:'Shift 1', start:'06:00', end:'18:00' },
@@ -1219,6 +1219,15 @@ function rosterHelperPersonName(code){
     if(p) return p.name;
   }
   return code;
+}
+function rosterHelperShortCode(code){
+  if(!code || code === '-') return code;
+  const parts = code.split('/').map(s => s.trim());
+  const mapped = parts.map(part => {
+    const p = ROSTER_HELPER_PERSONNEL.find(p => p.code === part);
+    return p ? p.shortCode : part;
+  });
+  return mapped.join('/');
 }
 function rosterHelperAvatarHTML(code, size){
   const s = size || 44;
@@ -1639,7 +1648,7 @@ function renderHelperCard(today, now){
           ${rosterHelperAvatarHTML(code, isLive ? 56 : 44)}
           <div>
             <div class="roster-shiftnow-name">${hasPerson ? rosterHelperPersonName(code) : '–'}</div>
-            <div class="roster-shiftnow-code">${hasPerson ? code : 'Belum ada data'}</div>
+            <div class="roster-shiftnow-code">${hasPerson ? rosterHelperShortCode(code) : 'Belum ada data'}</div>
           </div>
         </div>
       </div>`;
@@ -1664,7 +1673,7 @@ function rosterTodayCard(rec, highlight){
           return ROSTER_HELPER_SHIFT_DEFS.map(def => {
             const code = h[def.key];
             if(!code || code === '-') return '';
-            return `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper ${def.label}</span><span class="roster-cell-badge" style="background:${rosterHelperPersonColor(code)}">${code}</span><span class="roster-shift-name">${rosterHelperPersonName(code)}</span></div>`;
+            return `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper ${def.label}</span><span class="roster-cell-badge" style="background:${rosterHelperPersonColor(code)}">${rosterHelperShortCode(code)}</span><span class="roster-shift-name">${rosterHelperPersonName(code)}</span></div>`;
           }).join('');
         })()}
       </div>
