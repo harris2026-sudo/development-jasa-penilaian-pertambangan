@@ -1613,7 +1613,7 @@ function renderRoster(){
         <div class="roster-daycard-date roster-editable-label" contenteditable="true" data-rkey="label_infoTambahan">${rosterLabelText('label_infoTambahan','Info tambahan hari ini')}</div>
         <div class="roster-daycard-shifts">
           ${todayRec.backup && todayRec.backup !== '-' ? `<div class="roster-shift-row muted">${rosterAvatarHTML(todayRec.backup, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_backup" style="flex:0 0 90px;">${rosterLabelText('label_backup','Backup')}</span><span class="roster-shift-name">${rosterPersonName(todayRec.backup)}</span></div>` : ''}
-          ${todayRec.cuti && todayRec.cuti !== '-' ? `<div class="roster-shift-row muted">${rosterAvatarHTML(todayRec.cuti, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_cuti" style="flex:0 0 90px;background:#F5A623;color:#5C3D00;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_cuti','Cuti')}</span><span class="roster-shift-name">${rosterPersonName(todayRec.cuti)}</span></div>` : ''}
+          ${todayRec.cuti && todayRec.cuti !== '-' ? `<div class="roster-shift-row muted">${rosterAvatarHTML(todayRec.cuti, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_cuti" style="flex:0 0 90px;background:#F5A623;color:#5C3D00;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_cuti','Day-Off')}</span><span class="roster-shift-name">${rosterPersonName(todayRec.cuti)}</span></div>` : ''}
         </div>
       </div>`;
     }
@@ -1707,12 +1707,12 @@ function renderHelperCard(today, now){
         </div>
       </div>`;
   }).join('');
-  const cutiFromFooter = rosterHelperCuti.filter(e => today >= e.start && today <= e.end).map(e => e.name);
-  const cutiFromRow = (helperRec && helperRec.cuti && helperRec.cuti !== '-') ? [helperRec.cuti] : [];
-  const cutiNames = cutiFromRow.length ? cutiFromRow : cutiFromFooter;
+  // Catatan: Cuti HANYA diambil dari baris "Cuti" per-hari di blok mingguan (helperRec.cuti).
+  // Blok teks bebas "Cuti :" di bagian bawah sheet (baris 36-39, di-parse ke rosterHelperCuti) TIDAK dipakai lagi sesuai permintaan.
+  const cutiNames = (helperRec && helperRec.cuti && helperRec.cuti !== '-') ? [helperRec.cuti] : [];
   const overshiftName = (helperRec && helperRec.overshift && helperRec.overshift !== '-') ? helperRec.overshift : null;
   const infoRows = [
-    ...cutiNames.map(name => `<div class="roster-shift-row muted">${rosterHelperAvatarHTML(name, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_helperCuti" style="flex:0 0 90px;background:#F5A623;color:#5C3D00;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_helperCuti','Cuti')}</span><span class="roster-shift-name">${rosterHelperPersonName(name)}</span></div>`),
+    ...cutiNames.map(name => `<div class="roster-shift-row muted">${rosterHelperAvatarHTML(name, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_helperCuti" style="flex:0 0 90px;background:#F5A623;color:#5C3D00;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_helperCuti','Day-Off')}</span><span class="roster-shift-name">${rosterHelperPersonName(name)}</span></div>`),
     ...(overshiftName ? [`<div class="roster-shift-row muted">${rosterHelperAvatarHTML(overshiftName, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_helperOvershift" style="flex:0 0 90px;background:#22C55E;color:#063E1C;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_helperOvershift','Overshift')}</span><span class="roster-shift-name">${rosterHelperPersonName(overshiftName)}</span></div>`] : [])
   ];
   const cutiHtml = infoRows.length ? `<div class="roster-daycard">
@@ -1735,7 +1735,7 @@ function rosterTodayCard(rec, highlight){
         <div class="roster-shift-row"><span class="roster-shift-label">Shift 2 (13:00–01:00)</span><span class="roster-cell-badge" style="background:${rosterPersonColor(rec.shift2)}">${rec.shift2}</span><span class="roster-shift-name">${rosterPersonName(rec.shift2)}</span></div>
         <div class="roster-shift-row"><span class="roster-shift-label">Shift 3 (20:00–08:00)</span><span class="roster-cell-badge" style="background:${rosterPersonColor(rec.shift3)}">${rec.shift3}</span><span class="roster-shift-name">${rosterPersonName(rec.shift3)}</span></div>
         ${rec.backup && rec.backup !== '-' ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Backup</span><span class="roster-cell-badge" style="background:${rosterPersonColor(rec.backup)}">${rec.backup}</span><span class="roster-shift-name">${rosterPersonName(rec.backup)}</span></div>` : ''}
-        ${rec.cuti && rec.cuti !== '-' ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Cuti</span><span class="roster-cell-badge" style="background:${rosterPersonColor(rec.cuti)}">${rec.cuti}</span><span class="roster-shift-name">${rosterPersonName(rec.cuti)}</span></div>` : ''}
+        ${rec.cuti && rec.cuti !== '-' ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Day-Off</span><span class="roster-cell-badge" style="background:${rosterPersonColor(rec.cuti)}">${rec.cuti}</span><span class="roster-shift-name">${rosterPersonName(rec.cuti)}</span></div>` : ''}
         ${(() => {
           const h = rosterHelperDays.find(d => sameDay(d.date, rec.date));
           if(!h) return '';
@@ -1744,7 +1744,7 @@ function rosterTodayCard(rec, highlight){
             if(!code || code === '-') return '';
             return `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper ${def.label}</span><span class="roster-cell-badge" style="background:${rosterHelperPersonColor(code)}">${rosterHelperShortCode(code)}</span><span class="roster-shift-name">${rosterHelperPersonName(code)}</span></div>`;
           }).join('');
-          const cutiRow = (h.cuti && h.cuti !== '-') ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper Cuti</span><span class="roster-cell-badge" style="background:#F5A623;color:#5C3D00">${rosterHelperShortCode(h.cuti)}</span><span class="roster-shift-name">${rosterHelperPersonName(h.cuti)}</span></div>` : '';
+          const cutiRow = (h.cuti && h.cuti !== '-') ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper Day-Off</span><span class="roster-cell-badge" style="background:#F5A623;color:#5C3D00">${rosterHelperShortCode(h.cuti)}</span><span class="roster-shift-name">${rosterHelperPersonName(h.cuti)}</span></div>` : '';
           const overshiftRow = (h.overshift && h.overshift !== '-') ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper Overshift</span><span class="roster-cell-badge" style="background:#22C55E;color:#063E1C">${rosterHelperShortCode(h.overshift)}</span><span class="roster-shift-name">${rosterHelperPersonName(h.overshift)}</span></div>` : '';
           return shiftRows + cutiRow + overshiftRow;
         })()}
@@ -1760,6 +1760,14 @@ setInterval(() => {
     renderRoster(); // cukup re-render (tanpa fetch ulang) supaya badge LIVE ikut update jam berjalan
   }
 }, 60000);
+// Auto-sync data roster dari Google Sheets secara berkala (silent), supaya tidak perlu klik "Sinkron Ulang" manual
+// tiap kali ada perubahan data di sheet. Cukup fetch ulang, TIDAK mengganggu label contenteditable yang lagi diedit.
+const ROSTER_AUTO_SYNC_MS = 5 * 60 * 1000; // 5 menit
+setInterval(() => {
+  if(!rosterLoaded) return; // jangan tabrakan dengan initial load
+  if(document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('roster-editable-label')) return; // jangan ganggu saat user lagi edit label
+  loadRoster();
+}, ROSTER_AUTO_SYNC_MS);
 
 /* ---------------- TAB SWITCHING ---------------- */
 document.querySelectorAll('.tab').forEach(tab => {
