@@ -1326,7 +1326,7 @@ function parseRosterBlocks(rows){
         if(weekday) cols.push({ weekday, dateCell: dateRow[c] || null });
       }
       if(cols.length === 0) continue;
-      const rec = { shift1:[], shift2:[], shift3:[], backup:[], cuti:[] };
+      const rec = { shift1:[], shift2:[], shift3:[], backup:[], cuti:[], overshift:[] };
       let r = i+2;
       while(r < rows.length){
         const label = gvizCellText((rows[r]||[])[0]).trim();
@@ -1336,6 +1336,7 @@ function parseRosterBlocks(rows){
         else if(/shift\s*2/i.test(label)) rec.shift2 = values;
         else if(/shift\s*3/i.test(label)) rec.shift3 = values;
         else if(/backup/i.test(label)) rec.backup = values;
+        else if(/overshift/i.test(label)) rec.overshift = values;
         else if(/cuti/i.test(label)) rec.cuti = values;
         r++;
       }
@@ -1345,7 +1346,8 @@ function parseRosterBlocks(rows){
         days.push({
           date, weekday: col.weekday,
           shift1: rec.shift1[idx] || '-', shift2: rec.shift2[idx] || '-',
-          shift3: rec.shift3[idx] || '-', backup: rec.backup[idx] || '-', cuti: rec.cuti[idx] || '-'
+          shift3: rec.shift3[idx] || '-', backup: rec.backup[idx] || '-', cuti: rec.cuti[idx] || '-',
+          overshift: rec.overshift[idx] || '-'
         });
       });
       i = r-1;
@@ -1705,11 +1707,18 @@ function renderHelperCard(today, now){
         </div>
       </div>`;
   }).join('');
-  const cutiToday = rosterHelperCuti.filter(e => today >= e.start && today <= e.end);
-  const cutiHtml = cutiToday.length ? `<div class="roster-daycard">
+  const cutiFromFooter = rosterHelperCuti.filter(e => today >= e.start && today <= e.end).map(e => e.name);
+  const cutiFromRow = (helperRec && helperRec.cuti && helperRec.cuti !== '-') ? [helperRec.cuti] : [];
+  const cutiNames = cutiFromRow.length ? cutiFromRow : cutiFromFooter;
+  const overshiftName = (helperRec && helperRec.overshift && helperRec.overshift !== '-') ? helperRec.overshift : null;
+  const infoRows = [
+    ...cutiNames.map(name => `<div class="roster-shift-row muted">${rosterHelperAvatarHTML(name, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_helperCuti" style="flex:0 0 90px;background:#F5A623;color:#5C3D00;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_helperCuti','Cuti')}</span><span class="roster-shift-name">${rosterHelperPersonName(name)}</span></div>`),
+    ...(overshiftName ? [`<div class="roster-shift-row muted">${rosterHelperAvatarHTML(overshiftName, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_helperOvershift" style="flex:0 0 90px;background:#22C55E;color:#063E1C;border-radius:6px;padding:2px 6px;text-align:center;">${rosterLabelText('label_helperOvershift','Overshift')}</span><span class="roster-shift-name">${rosterHelperPersonName(overshiftName)}</span></div>`] : [])
+  ];
+  const cutiHtml = infoRows.length ? `<div class="roster-daycard">
     <div class="roster-daycard-date roster-editable-label" contenteditable="true" data-rkey="label_helperInfoTambahan">${rosterLabelText('label_helperInfoTambahan','Info tambahan Helper hari ini')}</div>
     <div class="roster-daycard-shifts">
-      ${cutiToday.map(e => `<div class="roster-shift-row muted">${rosterHelperAvatarHTML(e.name, 32)}<span class="roster-shift-label roster-editable-label" contenteditable="true" data-rkey="label_helperCuti" style="flex:0 0 90px;">${rosterLabelText('label_helperCuti','Cuti')}</span><span class="roster-shift-name">${rosterHelperPersonName(e.name)}</span></div>`).join('')}
+      ${infoRows.join('')}
     </div>
   </div>` : '';
   return `<div class="roster-daycard-date roster-editable-label" contenteditable="true" data-rkey="label_helperTitle" style="margin-top:16px;margin-bottom:10px;">${rosterLabelText('label_helperTitle','\u{1F9F0} Roster Helper')}</div>
@@ -1730,11 +1739,14 @@ function rosterTodayCard(rec, highlight){
         ${(() => {
           const h = rosterHelperDays.find(d => sameDay(d.date, rec.date));
           if(!h) return '';
-          return ROSTER_HELPER_SHIFT_DEFS.map(def => {
+          const shiftRows = ROSTER_HELPER_SHIFT_DEFS.map(def => {
             const code = h[def.key];
             if(!code || code === '-') return '';
             return `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper ${def.label}</span><span class="roster-cell-badge" style="background:${rosterHelperPersonColor(code)}">${rosterHelperShortCode(code)}</span><span class="roster-shift-name">${rosterHelperPersonName(code)}</span></div>`;
           }).join('');
+          const cutiRow = (h.cuti && h.cuti !== '-') ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper Cuti</span><span class="roster-cell-badge" style="background:#F5A623;color:#5C3D00">${rosterHelperShortCode(h.cuti)}</span><span class="roster-shift-name">${rosterHelperPersonName(h.cuti)}</span></div>` : '';
+          const overshiftRow = (h.overshift && h.overshift !== '-') ? `<div class="roster-shift-row muted"><span class="roster-shift-label">Helper Overshift</span><span class="roster-cell-badge" style="background:#22C55E;color:#063E1C">${rosterHelperShortCode(h.overshift)}</span><span class="roster-shift-name">${rosterHelperPersonName(h.overshift)}</span></div>` : '';
+          return shiftRows + cutiRow + overshiftRow;
         })()}
       </div>
     </div>`;
