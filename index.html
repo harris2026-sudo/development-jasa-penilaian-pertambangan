@@ -111,6 +111,11 @@
   .sk-vendor-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
   .sk-vendor-tabs button{flex:1;min-width:130px;padding:9px 6px;border-radius:8px;border:1.5px solid var(--hilite);background:#fff;color:var(--navy);font-weight:bold;font-size:12px;cursor:pointer;}
   .sk-vendor-tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .sk-vendor-tabs button .vt-label{cursor:text;}
+  .sk-vendor-tabs button .vt-label[contenteditable="true"]:hover{text-decoration:underline dotted;}
+  .sk-vendor-tabs button .vt-label[contenteditable="true"]:focus{outline:none;text-decoration:underline dotted;}
+  .sk-vendor-tabs button .vt-edit{cursor:pointer;font-size:10px;margin-left:4px;opacity:.55;}
+  .sk-vendor-tabs button .vt-edit:hover{opacity:1;}
   .sk-sync-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:10px;padding:9px 12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:12px;}
   .sk-sync-bar #skSyncStatus{color:#667;}
   .sk-sync-bar #skSyncStatus.ok{color:#1a7f37;font-weight:bold;}
@@ -122,6 +127,10 @@
   .sk-sync-bar button:disabled{opacity:.5;cursor:default;}
   .sk-sync-bar a.sk-open-sheet{background:var(--accent);color:#fff;text-decoration:none;display:inline-block;}
   .sk-sync-bar a.sk-open-sheet:hover{background:var(--navy);}
+  .sk-next-date{flex:1;min-width:160px;max-width:260px;border:1.5px solid var(--accent);border-radius:7px;padding:6px 10px;font-size:12px;font-weight:bold;color:var(--navy);background:#fff;cursor:text;text-align:center;}
+  .sk-next-date:hover{background:var(--hilite);}
+  .sk-next-date:focus{outline:none;background:var(--hilite);box-shadow:0 0 0 2px var(--accent);}
+  .sk-next-date:empty::before{content:"Klik untuk isi tanggal penilaian berikutnya";color:#9aa4b2;font-weight:normal;}
   .sk-info{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
   .sk-info-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
   .sk-info-row:last-child{margin-bottom:0;}
@@ -157,6 +166,31 @@
   .sk-legend td.p-Hitam{color:#000;font-weight:bold;}
   .sk-note{font-size:10.5px;color:#889;margin-top:2px;}
 
+  /* Rincian Status Pemenuhan view */
+  .rc-vendor-block{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px;}
+  .rc-vendor-head{background:var(--navy);color:#fff;padding:10px 14px;font-size:13px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .rc-vendor-head .rc-pjo{font-size:11px;font-weight:normal;opacity:.85;}
+  table.rc-table{width:100%;border-collapse:collapse;font-size:12px;}
+  table.rc-table th{background:var(--accent);color:#fff;padding:7px 6px;text-align:center;font-size:11px;}
+  table.rc-table td{padding:7px 6px;text-align:center;border-bottom:1px solid #eee;}
+  table.rc-table td.rc-aspek{text-align:left;font-weight:bold;color:#222;}
+  table.rc-table tbody tr:nth-child(even){background:var(--zebra);}
+  table.rc-table td.rc-na{color:#aaa;font-style:italic;}
+  .rc-badge{display:inline-block;min-width:22px;padding:2px 6px;border-radius:8px;font-weight:bold;font-size:11.5px;}
+  .rc-badge.sudah{background:var(--green-bg);color:var(--green);}
+  .rc-badge.proses{background:var(--yellow-bg);color:var(--yellow-fg);}
+  .rc-badge.belum{background:var(--red-bg);color:var(--red-fg);}
+  .rc-badge.na{background:var(--grey-bg);color:var(--grey-fg);}
+  .rc-total-row td{font-weight:bold;background:var(--hilite);color:var(--navy);}
+  .rc-note{font-size:10.5px;color:#889;margin:2px 0 14px;padding:0 2px;}
+  .rc-input{width:44px;padding:3px 2px;text-align:center;border-radius:8px;border:1px solid transparent;font-weight:bold;font-size:11.5px;font-family:Arial,sans-serif;}
+  .rc-input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .rc-input.sudah{background:var(--green-bg);color:var(--green);}
+  .rc-input.proses{background:var(--yellow-bg);color:var(--yellow-fg);}
+  .rc-input.belum{background:var(--red-bg);color:var(--red-fg);}
+  .rc-input.na{background:var(--grey-bg);color:var(--grey-fg);}
+  .rc-save-status{font-size:10px;font-weight:normal;opacity:.85;}
+
   footer{text-align:center;font-size:11px;color:#889;margin-top:20px;}
 
   @media (max-width:600px){
@@ -182,6 +216,7 @@
 
   <div class="tabs">
     <div class="tab active" data-view="summarykinerja">📈 Summary Kinerja PJP</div>
+    <div class="tab" data-view="rincian">📋 Rincian Status Pemenuhan</div>
     <div class="tab" data-view="ncpjp">📋 NC Pemenuhan PJP</div>
   </div>
 
@@ -190,6 +225,7 @@
     <div class="sk-vendor-tabs" id="skVendorTabs"></div>
     <div class="sk-sync-bar" id="skSyncBar">
       <span id="skSyncStatus">—</span>
+      <div class="sk-next-date" id="skNextDate" contenteditable="true" spellcheck="false" title="Tanggal penilaian PJP berikutnya (klik untuk edit)"></div>
       <div class="sk-sync-actions">
         <button type="button" id="skSyncBtn">🔄 Sync dari Spreadsheet</button>
       </div>
@@ -252,18 +288,18 @@
     </div>
   </div>
 
+  <!-- ================= VIEW: RINCIAN STATUS PEMENUHAN ================= -->
+  <div class="view" id="view-rincian">
+    <div class="rc-note"><span id="rcSaveStatus" class="rc-save-status"></span></div>
+    <div id="rcContainer"></div>
+  </div>
+
   <!-- ================= VIEW: NC PEMENUHAN PJP ================= -->
   <div class="view" id="view-ncpjp">
     <div class="fu-form">
       <div class="f-vendor">
         <label contenteditable="true" class="light-editable" data-label-key="ncLabelVendor">Nama Perusahaan Jasa Pertambangan</label>
-        <select id="ncVendor">
-          <option>Minergo Visi Maxima</option>
-          <option>Visi Global Technology</option>
-          <option>Vixmo Solusi Cerdas</option>
-          <option>Bening Guru Semesta</option>
-          <option>Lintech Duta Pratama</option>
-        </select>
+        <select id="ncVendor"></select>
       </div>
       <div class="f-small">
         <label contenteditable="true" class="light-editable" data-label-key="ncLabelAspek">Aspek Penilaian</label>
@@ -317,6 +353,44 @@
 
 <script>
 /* ---------------- STORAGE LAYER (auto fallback) ---------------- */
+// Deteksi apakah localStorage benar-benar bisa dipakai (bisa gagal dengan
+// SecurityError "opaque origin" saat file dibuka langsung via file:// atau
+// ditampilkan dalam iframe/preview yang di-sandbox tanpa allow-same-origin).
+function detectLocalStorageAvailable(){
+  try{
+    const testKey = '__storage_test__' + Date.now();
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+const localStorageAvailable = detectLocalStorageAvailable();
+
+// Fallback terakhir: penyimpanan di memori (hilang saat tab ditutup/refresh).
+// Dipakai HANYA kalau localStorage benar-benar tidak bisa diakses, supaya
+// aplikasi tetap jalan (tidak error) walau data tidak persisten.
+const memoryStore = {};
+const memoryFallback = {
+  async get(key){
+    if(!(key in memoryStore)) throw new Error('not found');
+    return { key, value: memoryStore[key], shared: false };
+  },
+  async set(key, value){
+    memoryStore[key] = value;
+    return { key, value, shared: false };
+  },
+  async delete(key){
+    delete memoryStore[key];
+    return { key, deleted: true, shared: false };
+  },
+  async list(prefix=''){
+    const keys = Object.keys(memoryStore).filter(k => k.startsWith(prefix));
+    return { keys, prefix, shared: false };
+  }
+};
+
 const localFallback = {
   async get(key){
     const v = localStorage.getItem(key);
@@ -337,7 +411,25 @@ const localFallback = {
   }
 };
 const usingClaudeStorage = (typeof window.storage !== 'undefined' && typeof window.storage.get === 'function');
-const store = usingClaudeStorage ? window.storage : localFallback;
+const store = usingClaudeStorage ? window.storage : (localStorageAvailable ? localFallback : memoryFallback);
+
+// Tampilkan banner peringatan kalau tidak ada penyimpanan permanen yang bisa dipakai,
+// supaya user TAHU datanya tidak akan tersimpan (bukan silent fail di console saja).
+function showStorageWarningBanner(){
+  const banner = document.createElement('div');
+  banner.id = 'storageWarningBanner';
+  banner.style.cssText = 'position:sticky;top:0;z-index:9999;background:#fef3c7;color:#92400e;'
+    + 'padding:10px 16px;font-size:13px;font-weight:600;text-align:center;'
+    + 'border-bottom:2px solid #f59e0b;box-shadow:0 2px 6px rgba(0,0,0,.08);';
+  banner.innerHTML = '⚠️ Penyimpanan permanen tidak tersedia di mode ini (localStorage diblokir browser). '
+    + 'Data yang diinput <u>TIDAK akan tersimpan</u> setelah tab ditutup/refresh. '
+    + 'Solusi: buka file ini via server/hosting (mis. GitHub Pages), jangan dobel-klik file HTML langsung. '
+    + '<span style="cursor:pointer;text-decoration:underline;margin-left:8px;" onclick="this.parentElement.remove()">Tutup</span>';
+  document.body.insertBefore(banner, document.body.firstChild);
+}
+if(!usingClaudeStorage && !localStorageAvailable){
+  document.addEventListener('DOMContentLoaded', showStorageWarningBanner);
+}
 
 function todayStr(){
   const d = new Date();
@@ -360,6 +452,15 @@ async function loadEditableLabels(){
       el.textContent = editableLabels[key];
     }
   });
+  syncDocumentTitle();
+}
+
+// Judul tab browser (document.title) mengikuti judul header (H1) secara otomatis.
+function syncDocumentTitle(){
+  const h1 = document.querySelector('[data-label-key="headerTitle"]');
+  if(!h1) return;
+  const cleanTitle = h1.textContent.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+  document.title = cleanTitle || 'Sistem Evaluasi dan Penilaian Jasa Pertambangan';
 }
 
 let labelSaveTimer = null;
@@ -373,14 +474,118 @@ document.querySelectorAll('[data-label-key]').forEach(el => {
   el.addEventListener('input', () => {
     editableLabels[el.dataset.labelKey] = el.textContent;
     scheduleLabelSave();
+    if(el.dataset.labelKey === 'headerTitle') syncDocumentTitle();
   });
   el.addEventListener('blur', () => {
     // rapikan spasi/enter liar dari contenteditable
     el.textContent = el.textContent.replace(/\s+/g, ' ').trim();
     editableLabels[el.dataset.labelKey] = el.textContent;
     scheduleLabelSave();
+    if(el.dataset.labelKey === 'headerTitle') syncDocumentTitle();
   });
 });
+
+/* ---------------- EDITABLE VENDOR TAB NAMES ---------------- */
+// Nama tampilan tombol vendor bisa diedit langsung, TANPA mengubah key data asli
+// (skor, sync Google Sheets, override aspek, dsb tetap memakai nama baku vendor).
+const VENDOR_LABEL_KEY = 'app:vendorLabels';
+let vendorLabels = {};
+
+async function loadVendorLabels(){
+  try{
+    const res = await store.get(VENDOR_LABEL_KEY);
+    vendorLabels = (res && res.value) ? JSON.parse(res.value) : {};
+  }catch(e){ vendorLabels = {}; }
+}
+function vendorDisplay(key){ return vendorLabels[key] || key; }
+
+let vendorLabelSaveTimer = null;
+function scheduleVendorLabelSave(){ clearTimeout(vendorLabelSaveTimer); vendorLabelSaveTimer = setTimeout(saveVendorLabels, 500); }
+async function saveVendorLabels(){
+  try{ await store.set(VENDOR_LABEL_KEY, JSON.stringify(vendorLabels)); }
+  catch(e){ console.error('Gagal menyimpan nama vendor', e); }
+}
+
+// Pasang listener edit pada setiap span.vt-label (dipanggil ulang tiap render tab vendor).
+function bindVendorLabelEditing(container){
+  container.querySelectorAll('.vt-label').forEach(span => {
+    span.addEventListener('click', (e) => { e.stopPropagation(); });
+    span.addEventListener('input', () => {
+      vendorLabels[span.dataset.vkey] = span.textContent;
+      scheduleVendorLabelSave();
+    });
+    span.addEventListener('blur', () => {
+      let clean = span.textContent.replace(/\s+/g, ' ').trim();
+      if(!clean) clean = span.dataset.vkey; // jangan biarkan kosong
+      span.textContent = clean;
+      vendorLabels[span.dataset.vkey] = clean;
+      scheduleVendorLabelSave();
+      if(skNamaPjpEl) skNamaPjpEl.value = vendorDisplay(skVendor);
+      renderNcVendorSelectOptions();
+    });
+    span.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); span.blur(); }
+    });
+  });
+}
+const skNamaPjpEl = document.getElementById('skNamaPjp');
+
+/* ---------------- TANGGAL PENILAIAN PJP BERIKUTNYA (per vendor, editable) ---------------- */
+const SK_NEXT_DATE_KEY = 'app:skNextDate';
+const SK_NEXT_DATE_SEED = {
+  "Minergo Visi Maxima": "15 Agustus 2026",
+  "Visi Global Technology": "30 Agustus 2026",
+  "Vixmo Transportasi Cerdas": "05 September 2026",
+  "Bening Guru Semesta": "Masih belum ada jadwal",
+  "Lintech Duta Pratama": "22 Juli 2026"
+};
+let skNextDates = {};
+
+async function loadSkNextDates(){
+  try{
+    const res = await store.get(SK_NEXT_DATE_KEY);
+    const saved = (res && res.value) ? JSON.parse(res.value) : {};
+    skNextDates = Object.assign({}, SK_NEXT_DATE_SEED, saved);
+  }catch(e){ skNextDates = Object.assign({}, SK_NEXT_DATE_SEED); }
+}
+
+let skNextDateSaveTimer = null;
+function scheduleSkNextDateSave(){ clearTimeout(skNextDateSaveTimer); skNextDateSaveTimer = setTimeout(saveSkNextDates, 500); }
+async function saveSkNextDates(){
+  try{ await store.set(SK_NEXT_DATE_KEY, JSON.stringify(skNextDates)); }
+  catch(e){ console.error('Gagal menyimpan tanggal penilaian berikutnya', e); }
+}
+
+function renderSkNextDate(){
+  const el = document.getElementById('skNextDate');
+  if(!el) return;
+  el.textContent = skNextDates[skVendor] || '';
+}
+
+const skNextDateEl = document.getElementById('skNextDate');
+if(skNextDateEl){
+  skNextDateEl.addEventListener('input', () => {
+    skNextDates[skVendor] = skNextDateEl.textContent;
+    scheduleSkNextDateSave();
+  });
+  skNextDateEl.addEventListener('blur', () => {
+    const clean = skNextDateEl.textContent.replace(/\s+/g, ' ').trim();
+    skNextDateEl.textContent = clean;
+    skNextDates[skVendor] = clean;
+    scheduleSkNextDateSave();
+  });
+  skNextDateEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); skNextDateEl.blur(); }
+  });
+}
+
+function renderNcVendorSelectOptions(){
+  const sel = document.getElementById('ncVendor');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = NC_VENDORS.map(v => `<option value="${v}">${vendorDisplay(v)}</option>`).join('');
+  if(NC_VENDORS.includes(prev)) sel.value = prev;
+}
 
 // Link "Buka Spreadsheet Sumber Data" klik langsung membuka spreadsheet (perilaku normal).
 // Untuk mengubah teksnya, gunakan tombol ✏️ di sampingnya (mode edit sementara).
@@ -422,7 +627,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 /* ================= NC PEMENUHAN PJP ENGINE ================= */
 const NC_STATUS = ["Open","Onprogress","Hold","Close"];
-const NC_VENDORS = ["Minergo Visi Maxima","Visi Global Technology","Vixmo Solusi Cerdas","Bening Guru Semesta","Lintech Duta Pratama"];
+const NC_VENDORS = ["Minergo Visi Maxima","Visi Global Technology","Vixmo Transportasi Cerdas","Bening Guru Semesta","Lintech Duta Pratama"];
 const NC_KEY = 'ncpjp:list';
 let ncItems = [];
 let ncFilterStatus = 'All';
@@ -438,7 +643,10 @@ async function loadNcPjp(){
 }
 async function saveNcPjp(){
   try{ await store.set(NC_KEY, JSON.stringify(ncItems)); }
-  catch(e){ console.error('Gagal menyimpan NC PJP', e); }
+  catch(e){
+    console.error('Gagal menyimpan NC PJP', e);
+    alert('Gagal menyimpan data NC PJP ke penyimpanan. Data hanya tampil sementara di layar dan TIDAK tersimpan permanen.\n\nDetail: ' + e.message);
+  }
 }
 
 document.getElementById('ncAddBtn').onclick = async () => {
@@ -468,10 +676,17 @@ document.getElementById('ncAddBtn').onclick = async () => {
 function renderNcVendorFilterBar(){
   const el = document.getElementById('ncVendorFilterBar');
   const opts = ['All', ...NC_VENDORS];
-  el.innerHTML = opts.map(v => `<button data-v="${v}" class="${ncFilterVendor===v?'active':''}">${v==='All'?'Semua Vendor':v}</button>`).join('');
+  el.innerHTML = opts.map(v => v === 'All'
+    ? `<button data-v="All" class="${ncFilterVendor==='All'?'active':''}">Semua Vendor</button>`
+    : `<button data-v="${v}" class="${ncFilterVendor===v?'active':''}"><span class="vt-label" contenteditable="true" spellcheck="false" data-vkey="${v}">${vendorDisplay(v)}</span></button>`
+  ).join('');
   el.querySelectorAll('button').forEach(btn => {
-    btn.onclick = () => { ncFilterVendor = btn.dataset.v; renderNcPjp(); };
+    btn.addEventListener('click', (e) => {
+      if(e.target.classList.contains('vt-label') && document.activeElement === e.target) return;
+      ncFilterVendor = btn.dataset.v; renderNcPjp();
+    });
   });
+  bindVendorLabelEditing(el);
 }
 
 function renderNcSummary(){
@@ -505,7 +720,7 @@ function renderNcList(){
     <div class="fu-card status-${it.status}" data-id="${it.id}">
       <div class="fu-top">
         <div>
-          <div class="fu-desc">${it.vendor} — ${it.aspek}</div>
+          <div class="fu-desc">${vendorDisplay(it.vendor)} — ${it.aspek}</div>
           <div class="fu-meta">${it.date}${it.pic ? ' · PIC: ' + it.pic : ''}${it.due ? ' · Due: ' + it.due : ''}</div>
         </div>
         <span class="fu-badge ${it.status}">${it.status}</span>
@@ -546,7 +761,7 @@ async function renderNcPjp(){
 }
 
 /* ================= SUMMARY KINERJA PJP ENGINE ================= */
-const SK_VENDORS = ["Minergo Visi Maxima","Visi Global Technology","Vixmo Solusi Cerdas","Bening Guru Semesta","Lintech Duta Pratama"];
+const SK_VENDORS = ["Minergo Visi Maxima","Visi Global Technology","Vixmo Transportasi Cerdas","Bening Guru Semesta","Lintech Duta Pratama"];
 const SK_ASPECTS = [
   { no:1, name:"Aspek Teknis Operasional", bobot:0.15, max:100 },
   { no:2, name:"Aspek Keselamatan Pertambangan", bobot:0.20, max:100 },
@@ -566,7 +781,192 @@ function getSkAspects(vendor){
   return SK_ASPECTS.map(a => overrides[a.no] ? Object.assign({}, a, overrides[a.no]) : a);
 }
 let skVendor = SK_VENDORS[0];
-let skData = { semester:"I", tahun:2026, pjo:"", nilai:{} };
+let skPeriodeTahun = 2026;
+let skPeriodeSemester = "I";
+let skPeriodeInitialized = false;
+let skData = { pjo:"", nilai:{} };
+const SK_LAST_PERIODE_KEY = 'summaryKinerja:lastPeriode';
+
+/* ---- Seed Nilai per aspek dari hasil Rincian Status Pemenuhan (Checklist Sem I 2026) ---- */
+/* Nilai = (% item "Sudah" terhadap item non-N/A) x 100, dibulatkan 2 desimal. Dipakai hanya  */
+/* sebagai nilai awal saat belum ada data tersimpan untuk vendor tsb (tidak menimpa input manual). */
+const SK_SEED_NILAI = {
+  "Minergo Visi Maxima":    { 1:38.46, 2:70.00, 4:43.75, 6:31.25, 7:0.00 },
+  "Visi Global Technology": { 1:0.00,  2:0.00,  4:0.00,  6:9.38,  7:100.00 },
+  "Vixmo Transportasi Cerdas":    { 1:18.75, 2:9.20,  4:8.33,  6:41.38, 7:50.00 },
+  "Bening Guru Semesta":    { 1:0.00,  6:0.00 },
+  "Lintech Duta Pratama":   { 1:0.00,  2:0.00,  3:0.00,  4:0.00,  6:0.00,  7:0.00 },
+};
+
+/* ---- Rincian Status Pemenuhan per Aspek per Mitra ---- */
+/* Pengisian dilakukan manual langsung dari tabel (input Sudah/Proses/Belum/N/A per aspek). */
+/* RINCIAN_DATA_DEFAULT hanya dipakai sebagai nilai awal saat belum ada data tersimpan utk mitra tsb. */
+const RINCIAN_ASPEK_LABELS = ["Teknis Operasional","Keselamatan Pertambangan (K3)","SMKP","Lingkungan Hidup","Konservasi","Standarisasi Usaha Jasa","Improvement"];
+const RINCIAN_DATA_DEFAULT = {
+  "Minergo Visi Maxima": [
+    {sudah:5,proses:8,belum:0,na:0},
+    {sudah:35,proses:15,belum:0,na:0},
+    null,
+    {sudah:7,proses:1,belum:3,na:5},
+    null,
+    {sudah:10,proses:22,belum:0,na:0},
+    {sudah:0,proses:8,belum:0,na:0},
+  ],
+  "Visi Global Technology": [
+    {sudah:0,proses:0,belum:28,na:0},
+    {sudah:0,proses:0,belum:87,na:0},
+    null,
+    {sudah:0,proses:0,belum:24,na:0},
+    null,
+    {sudah:3,proses:1,belum:28,na:0},
+    {sudah:8,proses:0,belum:0,na:0},
+  ],
+  "Vixmo Transportasi Cerdas": [
+    {sudah:3,proses:10,belum:3,na:13},
+    {sudah:8,proses:42,belum:37,na:0},
+    null,
+    {sudah:2,proses:6,belum:16,na:0},
+    null,
+    {sudah:12,proses:5,belum:12,na:3},
+    {sudah:4,proses:3,belum:1,na:0},
+  ],
+  "Bening Guru Semesta": [
+    {sudah:0,proses:0,belum:28,na:0},
+    null,
+    null,
+    null,
+    null,
+    {sudah:0,proses:0,belum:32,na:0},
+    null,
+  ],
+  "Lintech Duta Pratama": [
+    {sudah:0,proses:15,belum:7,na:6},
+    {sudah:0,proses:51,belum:36,na:0},
+    {sudah:0,proses:4,belum:0,na:1},
+    {sudah:0,proses:10,belum:10,na:4},
+    null,
+    {sudah:0,proses:30,belum:2,na:0},
+    {sudah:0,proses:8,belum:0,na:0},
+  ],
+};
+
+const RC_KEY = 'rincianStatusPemenuhan';
+let rcData = {};
+let rcSaveTimer = null;
+
+function rcDeepCopyDefault(){
+  const copy = {};
+  SK_VENDORS.forEach(v => {
+    copy[v] = (RINCIAN_DATA_DEFAULT[v] || RINCIAN_ASPEK_LABELS.map(()=>null)).map(r => r ? Object.assign({}, r) : null);
+  });
+  return copy;
+}
+
+async function loadRcData(){
+  try{
+    const res = await store.get(RC_KEY);
+    rcData = (res && res.value) ? JSON.parse(res.value) : rcDeepCopyDefault();
+  }catch(e){
+    rcData = rcDeepCopyDefault();
+  }
+  // Pastikan semua mitra & aspek punya slot (jaga-jaga kalau vendor/aspek baru ditambahkan nanti)
+  SK_VENDORS.forEach(v => {
+    if(!rcData[v]) rcData[v] = RINCIAN_ASPEK_LABELS.map(()=>null);
+  });
+}
+
+async function saveRcData(){
+  try{ await store.set(RC_KEY, JSON.stringify(rcData)); }catch(e){ console.error('Gagal menyimpan Rincian Status Pemenuhan', e); }
+  const el = document.getElementById('rcSaveStatus');
+  if(el){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    el.textContent = `Tersimpan pukul ${hh}:${mm}`;
+  }
+}
+function scheduleRcSave(){ clearTimeout(rcSaveTimer); rcSaveTimer = setTimeout(saveRcData, 500); }
+
+// Override khusus tampilan Rincian Status Pemenuhan (TIDAK mengubah bobot/ruang lingkup aspek
+// penilaian di Summary Kinerja PJP — hanya menyembunyikan kolom input di tabel ini menjadi
+// "N/A — di luar ruang lingkup" karena belum ada data checklist untuk aspek tsb).
+// Index aspek 0-based: 0 Teknis, 1 K3, 2 SMKP, 3 Lingkungan, 4 Konservasi, 5 Standarisasi, 6 Improvement.
+const RC_MANUAL_NA = {
+  "Bening Guru Semesta": [1, 3, 6]
+};
+
+function rcIsInScope(vendor, aspekIndex){
+  // aspekIndex 0-based -> aspek no 1-based sesuai SK_ASPECTS/override
+  const aspects = getSkAspects(vendor);
+  const a = aspects[aspekIndex];
+  if(!a || a.max <= 0) return false;
+  const manualNa = RC_MANUAL_NA[vendor];
+  if(manualNa && manualNa.includes(aspekIndex)) return false;
+  return true;
+}
+
+function renderRincian(){
+  const el = document.getElementById('rcContainer');
+  if(!el) return;
+  el.innerHTML = SK_VENDORS.map(vendor => {
+    const rows = rcData[vendor] || RINCIAN_ASPEK_LABELS.map(()=>null);
+    const bodyRows = rows.map((r, i) => {
+      if(!rcIsInScope(vendor, i)){
+        return `<tr><td class="rc-aspek">${RINCIAN_ASPEK_LABELS[i]}</td><td class="rc-na" colspan="4">N/A — di luar ruang lingkup</td></tr>`;
+      }
+      const v = r || {sudah:0,proses:0,belum:0,na:0};
+      const mk = (field) => `<input type="number" min="0" step="1" class="rc-input ${field}" data-vendor="${vendor}" data-aspek="${i}" data-field="${field}" value="${v[field]}">`;
+      return `<tr>
+        <td class="rc-aspek">${RINCIAN_ASPEK_LABELS[i]}</td>
+        <td>${mk('sudah')}</td>
+        <td>${mk('proses')}</td>
+        <td>${mk('belum')}</td>
+        <td>${mk('na')}</td>
+      </tr>`;
+    }).join('');
+    const totals = rows.reduce((acc, r, i) => {
+      if(rcIsInScope(vendor, i) && r){ acc.sudah+=(r.sudah||0); acc.proses+=(r.proses||0); acc.belum+=(r.belum||0); acc.na+=(r.na||0); }
+      return acc;
+    }, {sudah:0,proses:0,belum:0,na:0});
+    return `<div class="rc-vendor-block">
+      <div class="rc-vendor-head"><span>${vendorDisplay(vendor)}</span></div>
+      <table class="rc-table">
+        <thead><tr><th style="text-align:left;">Aspek Penilaian</th><th>Sudah</th><th>Dalam Proses</th><th>Belum</th><th>N/A</th></tr></thead>
+        <tbody>${bodyRows}
+          <tr class="rc-total-row" data-vendor-total="${vendor}"><td class="rc-aspek">Total</td><td class="rc-tot-sudah">${totals.sudah}</td><td class="rc-tot-proses">${totals.proses}</td><td class="rc-tot-belum">${totals.belum}</td><td class="rc-tot-na">${totals.na}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.rc-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const vendor = inp.dataset.vendor;
+      const aspekIdx = Number(inp.dataset.aspek);
+      const field = inp.dataset.field;
+      const val = Math.max(0, parseInt(inp.value, 10) || 0);
+      if(!rcData[vendor]) rcData[vendor] = RINCIAN_ASPEK_LABELS.map(()=>null);
+      if(!rcData[vendor][aspekIdx]) rcData[vendor][aspekIdx] = {sudah:0,proses:0,belum:0,na:0};
+      rcData[vendor][aspekIdx][field] = val;
+      rcUpdateVendorTotal(vendor);
+      scheduleRcSave();
+    });
+  });
+}
+
+function rcUpdateVendorTotal(vendor){
+  const rows = rcData[vendor] || [];
+  const totals = rows.reduce((acc, r, i) => {
+    if(rcIsInScope(vendor, i) && r){ acc.sudah+=(r.sudah||0); acc.proses+=(r.proses||0); acc.belum+=(r.belum||0); acc.na+=(r.na||0); }
+    return acc;
+  }, {sudah:0,proses:0,belum:0,na:0});
+  const row = document.querySelector(`.rc-total-row[data-vendor-total="${vendor}"]`);
+  if(!row) return;
+  row.querySelector('.rc-tot-sudah').textContent = totals.sudah;
+  row.querySelector('.rc-tot-proses').textContent = totals.proses;
+  row.querySelector('.rc-tot-belum').textContent = totals.belum;
+  row.querySelector('.rc-tot-na').textContent = totals.na;
+}
 
 /* ---- Google Sheets auto-sync ---- */
 const SK_SHEET_ID = '1cWBr2Vpcqi8wFp14yxKDLUypshZgN5q-';
@@ -650,7 +1050,8 @@ async function skSyncFromSheet(){
   }
 }
 
-function skKeyFor(vendor){ return 'summaryKinerja:' + vendor; }
+function skKeyFor(vendor, tahun, semester){ return 'summaryKinerja:' + tahun + ':' + semester + ':' + vendor; }
+function skLegacyKeyFor(vendor){ return 'summaryKinerja:' + vendor; } // format lama (sebelum ada pemisahan per semester/tahun)
 
 function skPredikat(nilai){
   if(nilai > 90) return 'Emas';
@@ -675,10 +1076,14 @@ function skComputeOverall(){
 
 function renderSkVendorTabs(){
   const el = document.getElementById('skVendorTabs');
-  el.innerHTML = SK_VENDORS.map(v => `<button data-v="${v}" class="${v===skVendor?'active':''}">${v}</button>`).join('');
+  el.innerHTML = SK_VENDORS.map(v => `<button data-v="${v}" class="${v===skVendor?'active':''}"><span class="vt-label" contenteditable="true" spellcheck="false" data-vkey="${v}">${vendorDisplay(v)}</span></button>`).join('');
   el.querySelectorAll('button').forEach(btn => {
-    btn.onclick = async () => { skVendor = btn.dataset.v; await loadSkData(); renderSummaryKinerjaUI(); skSyncFromSheet(); };
+    btn.addEventListener('click', async (e) => {
+      if(e.target.classList.contains('vt-label') && document.activeElement === e.target) return;
+      skVendor = btn.dataset.v; renderSkNextDate(); await loadSkData(); renderSummaryKinerjaUI(); skSyncFromSheet();
+    });
   });
+  bindVendorLabelEditing(el);
 }
 
 function renderSkTable(){
@@ -725,45 +1130,166 @@ function renderSkResult(){
 let skSaveTimer = null;
 function scheduleSkSave(){ clearTimeout(skSaveTimer); skSaveTimer = setTimeout(saveSkData, 500); }
 async function saveSkData(){
-  skData.semester = document.getElementById('skSemester').value;
-  skData.tahun = document.getElementById('skTahun').value;
   skData.pjo = document.getElementById('skPjo').value;
-  try{ await store.set(skKeyFor(skVendor), JSON.stringify(skData)); }
+  try{ await store.set(skKeyFor(skVendor, skPeriodeTahun, skPeriodeSemester), JSON.stringify(skData)); }
   catch(e){ console.error('Gagal menyimpan summary kinerja', e); }
 }
 async function loadSkData(){
+  const key = skKeyFor(skVendor, skPeriodeTahun, skPeriodeSemester);
   try{
-    const res = await store.get(skKeyFor(skVendor));
-    skData = (res && res.value) ? JSON.parse(res.value) : { semester:"I", tahun:2026, pjo:"", nilai:{} };
+    const res = await store.get(key);
+    skData = (res && res.value) ? JSON.parse(res.value) : null;
   }catch(e){
-    skData = { semester:"I", tahun:2026, pjo:"", nilai:{} };
+    skData = null;
   }
+  if(!skData){
+    // Belum ada data utk periode ini -> coba migrasi dari format lama (sebelum pemisahan
+    // per semester/tahun), HANYA berlaku utk periode default Semester I 2026.
+    if(skPeriodeTahun === 2026 && skPeriodeSemester === "I"){
+      try{
+        const legacy = await store.get(skLegacyKeyFor(skVendor));
+        if(legacy && legacy.value){
+          skData = JSON.parse(legacy.value);
+          await store.set(key, JSON.stringify(skData)); // simpan ulang ke format baru
+        }
+      }catch(e){ /* tidak ada data lama */ }
+    }
+  }
+  if(!skData) skData = { pjo:"", nilai:{} };
+  if(!skData.nilai) skData.nilai = {};
+}
+async function loadSkLastPeriode(){
+  try{
+    const res = await store.get(SK_LAST_PERIODE_KEY);
+    if(res && res.value){
+      const p = JSON.parse(res.value);
+      if(p.tahun) skPeriodeTahun = Number(p.tahun);
+      if(p.semester) skPeriodeSemester = p.semester;
+    }
+  }catch(e){ /* pakai default */ }
+}
+async function saveSkLastPeriode(){
+  try{ await store.set(SK_LAST_PERIODE_KEY, JSON.stringify({ tahun: skPeriodeTahun, semester: skPeriodeSemester })); }
+  catch(e){}
+}
+async function handleSkPeriodeChange(){
+  const newSemester = document.getElementById('skSemester').value;
+  const newTahun = Number(document.getElementById('skTahun').value) || skPeriodeTahun;
+  if(newSemester === skPeriodeSemester && newTahun === skPeriodeTahun) return;
+  await saveSkData(); // simpan data periode SEBELUM pindah, ke key periode lama
+  skPeriodeSemester = newSemester;
+  skPeriodeTahun = newTahun;
+  await saveSkLastPeriode();
+  await loadSkData(); // muat data periode baru (kosong kalau belum pernah diisi)
+  renderSummaryKinerjaUI();
+  skSyncFromSheet();
 }
 
 function renderSummaryKinerjaUI(){
-  document.getElementById('skNamaPjp').value = skVendor;
-  document.getElementById('skSemester').value = skData.semester || "I";
-  document.getElementById('skTahun').value = skData.tahun || 2026;
+  document.getElementById('skNamaPjp').value = vendorDisplay(skVendor);
+  document.getElementById('skSemester').value = skPeriodeSemester;
+  document.getElementById('skTahun').value = skPeriodeTahun;
   document.getElementById('skPjo').value = skData.pjo || "";
   renderSkVendorTabs();
+  renderSkNextDate();
   renderSkTable();
   renderSkResult();
 }
 
-document.getElementById('skSemester').onchange = scheduleSkSave;
-document.getElementById('skTahun').oninput = scheduleSkSave;
+document.getElementById('skSemester').addEventListener('change', handleSkPeriodeChange);
+document.getElementById('skTahun').addEventListener('change', handleSkPeriodeChange);
 document.getElementById('skPjo').oninput = scheduleSkSave;
 document.getElementById('skSyncBtn').onclick = skSyncFromSheet;
 
 async function renderSummaryKinerja(){
+  if(!skPeriodeInitialized){ await loadSkLastPeriode(); skPeriodeInitialized = true; }
   await loadSkData();
   renderSummaryKinerjaUI();
   skSyncFromSheet();
 }
 
+/* ---------------- MIGRASI RENAME VENDOR ---------------- */
+/* "Vixmo Solusi Cerdas" -> "Vixmo Transportasi Cerdas" (nama tab Google Sheets & identitas vendor). */
+/* Memindahkan data lama (kalau ada) yang masih tersimpan dengan nama lama, supaya tidak hilang. */
+const VENDOR_RENAME_MAP = { "Vixmo Solusi Cerdas": "Vixmo Transportasi Cerdas" };
+async function migrateVendorRenames(){
+  for(const [oldName, newName] of Object.entries(VENDOR_RENAME_MAP)){
+    // 1) Summary Kinerja PJP per-vendor (skKeyFor)
+    try{
+      const oldKey = 'summaryKinerja:' + oldName;
+      const res = await store.get(oldKey);
+      if(res && res.value){
+        const newKey = 'summaryKinerja:' + newName;
+        let hasNew = false;
+        try{ const chk = await store.get(newKey); hasNew = !!(chk && chk.value); }catch(e){ hasNew = false; }
+        if(!hasNew){ await store.set(newKey, res.value); }
+        await store.delete(oldKey);
+      }
+    }catch(e){ /* tidak ada data lama, lewati */ }
+
+    // 2) Vendor Labels (app:vendorLabels)
+    try{
+      const res = await store.get(VENDOR_LABEL_KEY);
+      if(res && res.value){
+        const obj = JSON.parse(res.value);
+        if(obj[oldName] !== undefined){
+          if(obj[newName] === undefined) obj[newName] = obj[oldName];
+          delete obj[oldName];
+          await store.set(VENDOR_LABEL_KEY, JSON.stringify(obj));
+        }
+      }
+    }catch(e){}
+
+    // 3) Tanggal Penilaian Berikutnya (app:skNextDate)
+    try{
+      const res = await store.get(SK_NEXT_DATE_KEY);
+      if(res && res.value){
+        const obj = JSON.parse(res.value);
+        if(obj[oldName] !== undefined){
+          if(obj[newName] === undefined) obj[newName] = obj[oldName];
+          delete obj[oldName];
+          await store.set(SK_NEXT_DATE_KEY, JSON.stringify(obj));
+        }
+      }
+    }catch(e){}
+
+    // 4) Rincian Status Pemenuhan (rincianStatusPemenuhan)
+    try{
+      const res = await store.get(RC_KEY);
+      if(res && res.value){
+        const obj = JSON.parse(res.value);
+        if(obj[oldName] !== undefined){
+          if(obj[newName] === undefined) obj[newName] = obj[oldName];
+          delete obj[oldName];
+          await store.set(RC_KEY, JSON.stringify(obj));
+        }
+      }
+    }catch(e){}
+
+    // 5) NC Pemenuhan PJP (ncpjp:list) - update field vendor pada tiap item
+    try{
+      const res = await store.get(NC_KEY);
+      if(res && res.value){
+        const items = JSON.parse(res.value);
+        let changed = false;
+        items.forEach(it => { if(it.vendor === oldName){ it.vendor = newName; changed = true; } });
+        if(changed) await store.set(NC_KEY, JSON.stringify(items));
+      }
+    }catch(e){}
+  }
+}
+
 /* ---------------- INIT ---------------- */
-loadEditableLabels();
-renderSummaryKinerja();
+(async () => {
+  await migrateVendorRenames();
+  await loadVendorLabels();
+  await loadSkNextDates();
+  renderNcVendorSelectOptions();
+  loadEditableLabels();
+  await loadRcData();
+  renderRincian();
+  renderSummaryKinerja();
+})();
 </script>
 </body>
 </html>
