@@ -722,35 +722,37 @@ function orderformCsvUrl(){
 
 /* ============================================================
    KONFIGURASI NOTIFIKASI WHATSAPP (pengajuan RFID baru -> WA)
-   Pakai CallMeBot (https://www.callmebot.com) — API WA 100% GRATIS
-   untuk pemakaian pribadi, tanpa API key Meta/WhatsApp Business,
-   tanpa billing, tanpa server tambahan. Notif dikirim otomatis tiap
-   kali sync Order Form menemukan pengajuan RFID baru (bersamaan
-   dengan popup notif yang sudah ada).
+   Pakai Fonnte (https://fonnte.com), TAPI dikirim lewat proxy Apps
+   Script (APPS_SCRIPT_URL yang sudah dipakai untuk storage di atas),
+   BUKAN langsung dari browser. Ini WAJIB, karena token Fonnte terikat
+   ke device WA asli — kalau ditaruh di file HTML (client-side),
+   siapa pun yang "view source" halaman bisa mencuri token itu dan
+   pakai nomor WA Harris untuk kirim pesan tanpa izin. Dengan lewat
+   Apps Script, token cukup disimpan di kode Code.gs (server-side),
+   tidak pernah terkirim ke browser.
 
-   CARA AKTIFKAN (sekali saja, 2 menit):
-   1. Simpan nomor +34 644 44 21 48 di kontak HP (nama bebas).
-   2. Kirim pesan persis: "I allow callmebot to send me messages"
-      ke nomor itu lewat WhatsApp.
-   3. Tunggu balasan berisi APIKEY (misal: "API Activated... APIKEY is 123456").
-   4. Isi WA_PHONE (nomor WA Harris, format 62..., TANPA tanda +)
-      dan WA_APIKEY di bawah ini dengan apikey dari langkah 3.
+   CARA AKTIFKAN:
+   1. Daftar & scan QR device di dashboard Fonnte (md.fonnte.com/new/register.php),
+      pakai nomor WA kedua/cadangan (disarankan, bukan nomor utama).
+   2. Copy Token device dari dashboard Fonnte.
+   3. Buka Apps Script (Code.gs) yang sudah dipakai untuk backend storage
+      DCVA, isi variabel FONNTE_TOKEN di sana dengan token dari langkah 2.
+   4. Deploy > Manage deployments > Edit > New version > Deploy (WAJIB,
+      kalau tidak perubahan token tidak aktif).
+   5. Isi WA_RECIPIENTS di bawah ini dengan nomor WA tujuan (62xxx, TANPA
+      tanda +) — token TIDAK diisi di sini, cukup di Code.gs.
 
    CATATAN:
-   - Ini nomor pribadi Harris (atau siapa pun yang mau menerima notif).
-   - Kalau mau notif ke lebih dari 1 nomor, ulangi langkah 1-3 untuk
-     tiap nomor, lalu tambahkan ke array WA_RECIPIENTS di bawah.
    - Notif ini terkirim saat aplikasi DCVA terbuka di browser (mengikuti
-     jadwal polling ORDERFORM_POLL_MS di atas, tiap 90 detik). Kalau mau
-     notif jalan terus walau aplikasi tidak dibuka siapa pun, perlu
-     trigger tambahan di sisi Apps Script (server-side) — tinggal minta
-     ke Claude kalau mau dibuatkan.
+     jadwal polling ORDERFORM_POLL_MS di atas, tiap 90 detik).
+   - Mau kirim ke lebih dari 1 nomor tinggal tambah baris di WA_RECIPIENTS,
+     satu device Fonnte bisa kirim ke banyak nomor tujuan.
    ============================================================ */
 const WA_NOTIF_ENABLED = true; // set false untuk mematikan notifikasi WA tanpa hapus konfigurasi
 const WA_RECIPIENTS = [
-  { name: "Harris", phone: "6281234567890", apikey: "" } // <-- WAJIB diisi: phone (62xxxx tanpa +) & apikey dari CallMeBot
+  { name: "Harris", phone: "6281234567890" } // <-- WAJIB diisi nomor WA tujuan (62xxx, tanpa tanda +)
   // Tambah baris lain kalau mau kirim ke nomor lain juga, contoh:
-  // { name: "Nico", phone: "62812xxxxxxx", apikey: "654321" },
+  // { name: "Nico", phone: "62812xxxxxxx" },
 ];
 
 function waFormatMessage(items){
@@ -763,22 +765,30 @@ function waFormatMessage(items){
 }
 
 async function sendWhatsAppNotif(items){
-  if(!WA_NOTIF_ENABLED || !items || items.length === 0) return;
+  if(!WA_NOTIF_ENABLED || !items || items.length === 0) return { ok: false, error: 'disabled_or_empty' };
+  if(!APPS_SCRIPT_URL){
+    console.warn('WA notif dilewati: APPS_SCRIPT_URL belum diisi.');
+    return { ok: false, error: 'apps_script_url_missing' };
+  }
   const message = waFormatMessage(items);
+  const results = [];
   for(const r of WA_RECIPIENTS){
-    if(!r.phone || !r.apikey){
-      console.warn(`WA notif dilewati untuk "${r.name}": phone/apikey belum diisi di WA_RECIPIENTS.`);
+    if(!r.phone){
+      console.warn(`WA notif dilewati untuk "${r.name}": phone belum diisi di WA_RECIPIENTS.`);
       continue;
     }
     try{
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(r.phone)}&text=${encodeURIComponent(message)}&apikey=${encodeURIComponent(r.apikey)}`;
-      await fetch(url, { method: 'GET', mode: 'no-cors' });
-      // mode 'no-cors' dipakai karena respons CallMeBot tidak selalu kirim header CORS;
-      // kita tidak perlu baca isi responnya, cukup memastikan request terkirim.
+      const url = `${APPS_SCRIPT_URL}?action=send_wa&phone=${encodeURIComponent(r.phone)}&message=${encodeURIComponent(message)}&_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json().catch(() => null);
+      if(!data || !data.ok) console.warn(`Gagal kirim notif WA ke ${r.name} (via Fonnte/Apps Script):`, data);
+      results.push({ name: r.name, ...(data || { ok: false }) });
     }catch(e){
       console.warn(`Gagal kirim notif WA ke ${r.name}:`, e);
+      results.push({ name: r.name, ok: false, error: String(e) });
     }
   }
+  return results;
 }
 
 /* ============================================================
@@ -3317,20 +3327,25 @@ if(orderformSyncBtnEl) orderformSyncBtnEl.onclick = () => syncOrderForm({ silent
 const waTestBtnEl = document.getElementById('waTestBtn');
 if(waTestBtnEl){
   waTestBtnEl.onclick = async () => {
-    const notConfigured = WA_RECIPIENTS.filter(r => !r.phone || !r.apikey);
+    const notConfigured = WA_RECIPIENTS.filter(r => !r.phone);
     if(!WA_NOTIF_ENABLED){
       showToast('⚠️ WA_NOTIF_ENABLED = false. Aktifkan dulu di config script.', 'error'); return;
     }
+    if(!APPS_SCRIPT_URL){
+      showToast('⚠️ APPS_SCRIPT_URL belum diisi di config script.', 'error'); return;
+    }
     if(notConfigured.length === WA_RECIPIENTS.length){
-      showToast('⚠️ WA_PHONE/WA_APIKEY belum diisi. Lihat panduan di config script.', 'error'); return;
+      showToast('⚠️ Nomor WA di WA_RECIPIENTS belum diisi.', 'error'); return;
     }
     waTestBtnEl.disabled = true; waTestBtnEl.textContent = '📲 Mengirim...';
-    await sendWhatsAppNotif([{
+    const results = await sendWhatsAppNotif([{
       pic: 'Test User', vendor: 'Test Mitra',
       desc: 'Permintaan Tag: Test', note: 'Jumlah RFID: 1 (ini pesan uji coba)'
     }]);
     waTestBtnEl.disabled = false; waTestBtnEl.textContent = '📲 Test Notif WA';
-    showToast('✓ Perintah kirim WA terkirim. Cek WhatsApp dalam beberapa detik.', 'success');
+    const anyFail = !Array.isArray(results) || results.length === 0 || results.some(r => !r.ok);
+    if(anyFail) showToast('✗ Gagal kirim ke WA. Cek FONNTE_TOKEN di Code.gs & console (F12) untuk detail.', 'error');
+    else showToast('✓ Pesan test WA terkirim! Cek WhatsApp dalam beberapa detik.', 'success');
   };
 }
 
