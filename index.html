@@ -558,6 +558,7 @@
         <span style="font-size:10.5px;color:#889;" id="orderformSyncInfo">Belum pernah cek Order Form.</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button type="button" class="btn btn-ghost" id="waTestBtn" style="font-size:11.5px;padding:6px 12px;">📲 Test Notif WA</button>
+          <button type="button" class="btn btn-ghost" id="tgTestBtn" style="font-size:11.5px;padding:6px 12px;">🔵 Test Notif Telegram</button>
           <button type="button" class="btn btn-ghost" id="orderformSyncBtn" style="font-size:11.5px;padding:6px 12px;">🔄 Cek Pengajuan Baru (Order Form)</button>
         </div>
       </div>
@@ -776,6 +777,79 @@ async function sendWhatsAppNotif(items){
       // kita tidak perlu baca isi responnya, cukup memastikan request terkirim.
     }catch(e){
       console.warn(`Gagal kirim notif WA ke ${r.name}:`, e);
+    }
+  }
+}
+
+/* ============================================================
+   KONFIGURASI NOTIFIKASI TELEGRAM (pengajuan RFID baru -> Telegram)
+   Pakai Telegram Bot API — 100% GRATIS, tanpa batas kirim, tanpa
+   perlu aktivasi manual tiap 24 jam seperti WhatsApp/CallMeBot.
+   API resmi Telegram mendukung CORS langsung dari browser, jadi
+   jauh lebih stabil dibanding CallMeBot.
+
+   CARA AKTIFKAN (3 menit, sekali saja):
+   1. Buka Telegram, cari kontak "@BotFather", chat, ketik: /newbot
+   2. Ikuti instruksinya (kasih nama bot bebas, mis. "DCVA Notif Bot",
+      lalu username bot harus unik & berakhiran "bot", mis. "dcva_rfid_bot").
+   3. BotFather akan balas dengan TOKEN, contoh:
+      123456789:AAExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      -> isi ke TELEGRAM_BOT_TOKEN di bawah.
+   4. Cari bot yang baru dibuat tadi (pakai username-nya) di Telegram,
+      lalu tekan "Start" / kirim pesan apa saja ke bot itu (WAJIB,
+      supaya bot punya izin kirim pesan ke Harris).
+   5. Untuk dapat CHAT_ID Harris, buka di browser (ganti <TOKEN>):
+      https://api.telegram.org/bot<TOKEN>/getUpdates
+      Cari angka di "chat":{"id": ...} — itu CHAT_ID.
+      (Cara lain: chat ke bot "@userinfobot", dia balas Chat ID kamu.)
+   6. Isi TELEGRAM_BOT_TOKEN dan TELEGRAM_RECIPIENTS di bawah.
+
+   CATATAN:
+   - Satu bot bisa kirim ke banyak orang, tinggal tambah chat_id
+     masing-masing (tiap orang WAJIB pernah chat/Start ke bot dulu).
+   - Sama seperti WA: notif ini terkirim saat DCVA terbuka di browser
+     (mengikuti jadwal polling ORDERFORM_POLL_MS, tiap 90 detik).
+   ============================================================ */
+const TELEGRAM_NOTIF_ENABLED = true; // set false untuk mematikan tanpa hapus config
+const TELEGRAM_BOT_TOKEN = ""; // <-- WAJIB diisi token dari @BotFather
+const TELEGRAM_RECIPIENTS = [
+  { name: "Harris", chat_id: "" } // <-- WAJIB diisi chat_id dari getUpdates / @userinfobot
+  // Tambah baris lain kalau mau kirim ke orang lain juga, contoh:
+  // { name: "Nico", chat_id: "987654321" },
+];
+
+function telegramFormatMessage(items){
+  const head = `🔔 *DCVA - Pengajuan RFID Baru*\n${items.length} pengajuan baru masuk (Order Form):\n`;
+  const body = items.slice(0, 5).map(it =>
+    `\n👤 ${it.pic}\n🏢 Mitra: ${it.vendor}\n🏷️ ${it.desc}\n🔢 ${it.note}`
+  ).join('\n');
+  const more = items.length > 5 ? `\n\n+${items.length - 5} pengajuan lainnya...` : '';
+  return head + body + more + `\n\nCek detail di menu Follow Up - DCVA.`;
+}
+
+async function sendTelegramNotif(items){
+  if(!TELEGRAM_NOTIF_ENABLED || !items || items.length === 0) return;
+  if(!TELEGRAM_BOT_TOKEN){
+    console.warn('Telegram notif dilewati: TELEGRAM_BOT_TOKEN belum diisi.');
+    return;
+  }
+  const message = telegramFormatMessage(items);
+  for(const r of TELEGRAM_RECIPIENTS){
+    if(!r.chat_id){
+      console.warn(`Telegram notif dilewati untuk "${r.name}": chat_id belum diisi di TELEGRAM_RECIPIENTS.`);
+      continue;
+    }
+    try{
+      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: r.chat_id, text: message, parse_mode: 'Markdown' })
+      });
+      const data = await res.json().catch(() => null);
+      if(!data || !data.ok) console.warn(`Gagal kirim notif Telegram ke ${r.name}:`, data);
+    }catch(e){
+      console.warn(`Gagal kirim notif Telegram ke ${r.name}:`, e);
     }
   }
 }
@@ -3165,6 +3239,7 @@ async function syncOrderForm(opts){
         else updateFollowUpBadge();
         showOrderFormAlert(trulyNew);
         sendWhatsAppNotif(trulyNew);
+        sendTelegramNotif(trulyNew);
       }
     }
 
@@ -3256,6 +3331,47 @@ if(waTestBtnEl){
     }]);
     waTestBtnEl.disabled = false; waTestBtnEl.textContent = '📲 Test Notif WA';
     showToast('✓ Perintah kirim WA terkirim. Cek WhatsApp dalam beberapa detik.', 'success');
+  };
+}
+
+const tgTestBtnEl = document.getElementById('tgTestBtn');
+if(tgTestBtnEl){
+  tgTestBtnEl.onclick = async () => {
+    if(!TELEGRAM_NOTIF_ENABLED){
+      showToast('⚠️ TELEGRAM_NOTIF_ENABLED = false. Aktifkan dulu di config script.', 'error'); return;
+    }
+    if(!TELEGRAM_BOT_TOKEN){
+      showToast('⚠️ TELEGRAM_BOT_TOKEN belum diisi. Lihat panduan di config script.', 'error'); return;
+    }
+    const notConfigured = TELEGRAM_RECIPIENTS.filter(r => !r.chat_id);
+    if(notConfigured.length === TELEGRAM_RECIPIENTS.length){
+      showToast('⚠️ TELEGRAM_RECIPIENTS chat_id belum diisi. Lihat panduan di config script.', 'error'); return;
+    }
+    tgTestBtnEl.disabled = true; tgTestBtnEl.textContent = '🔵 Mengirim...';
+    let anyFail = false;
+    try{
+      for(const r of TELEGRAM_RECIPIENTS){
+        if(!r.chat_id) continue;
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: r.chat_id,
+            text: telegramFormatMessage([{
+              pic: 'Test User', vendor: 'Test Mitra',
+              desc: 'Permintaan Tag: Test', note: 'Jumlah RFID: 1 (ini pesan uji coba)'
+            }]),
+            parse_mode: 'Markdown'
+          })
+        });
+        const data = await res.json().catch(() => null);
+        if(!data || !data.ok){ anyFail = true; console.warn('Telegram test gagal:', data); }
+      }
+    }catch(e){ anyFail = true; console.warn('Telegram test error:', e); }
+    tgTestBtnEl.disabled = false; tgTestBtnEl.textContent = '🔵 Test Notif Telegram';
+    if(anyFail) showToast('✗ Gagal kirim ke Telegram. Cek TOKEN/chat_id & console (F12) untuk detail error.', 'error');
+    else showToast('✓ Pesan test Telegram terkirim! Cek chat dengan bot.', 'success');
   };
 }
 
