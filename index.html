@@ -212,6 +212,13 @@
   table.sk-table td.sk-total{font-weight:bold;background:var(--hilite);color:var(--navy);}
   table.sk-table input.sk-nilai{width:56px;text-align:center;border:1px solid #c7d3e0;border-radius:5px;padding:4px;font-family:Arial;font-size:12px;transition:border-color .15s ease,box-shadow .15s ease;}
   table.sk-table input.sk-nilai:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(46,95,163,.15);}
+
+  .sk-progress-wrap{display:flex;align-items:center;gap:8px;min-width:150px;}
+  .sk-progress-track{flex:1;height:16px;border-radius:8px;background:#fff;border:1px solid #c7d3e0;overflow:hidden;position:relative;}
+  .sk-progress-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,#6a9bcf,var(--accent));transition:width .6s cubic-bezier(.4,0,.2,1),background .3s ease;width:0%;}
+  .sk-progress-fill.complete{background:linear-gradient(90deg,#5DCAA5,var(--green));}
+  .sk-progress-fill.low{background:linear-gradient(90deg,#F09595,#D85A30);}
+  .sk-progress-label{font-size:11px;font-weight:bold;color:var(--navy);min-width:34px;text-align:right;}
   .sk-result{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
   .sk-result .box{flex:1;min-width:180px;background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .2s ease,box-shadow .2s ease;}
   .sk-result .box:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(31,56,100,.14);}
@@ -335,9 +342,7 @@
     <div class="sk-vendor-tabs" id="skVendorTabs"></div>
     <div class="sk-sync-bar" id="skSyncBar">
       <span id="skSyncStatus">—</span>
-      <div style="flex:1;min-width:160px;max-width:260px;position:relative;">
-        <input type="text" class="sk-next-date" id="skNextDate" spellcheck="false" autocomplete="off" placeholder="Jadwal Penilaian" title="Tanggal penilaian PJP berikutnya (klik untuk edit)" style="border:2px solid #e74c3c;font-weight:bold;color:var(--navy);">
-      </div>
+      <input type="text" class="sk-next-date" id="skNextDate" spellcheck="false" autocomplete="off" placeholder="Klik untuk isi tanggal penilaian berikutnya" title="Tanggal penilaian PJP berikutnya (klik untuk edit)">
       <div class="sk-sync-actions">
         <button type="button" id="skSyncBtn">🔄 Sync dari Spreadsheet<span class="sk-sync-badge" id="skSyncBadge">0</span></button>
       </div>
@@ -1661,6 +1666,24 @@ function renderSkVendorTabs(){
   skRenderUpdateIndicators();
 }
 
+function updateSkProgress(){
+  const fill = document.getElementById('skProgressFill');
+  const label = document.getElementById('skProgressLabel');
+  if(!fill || !label) return;
+  const aspects = getSkAspects(skVendor).filter(a => a.max !== 0);
+  const total = aspects.length;
+  const filled = aspects.filter(a => {
+    const v = skData.nilai[a.no];
+    return v !== undefined && v !== null && v !== '';
+  }).length;
+  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  fill.style.width = pct + '%';
+  label.textContent = pct + '%';
+  fill.classList.remove('complete','low');
+  if(pct === 100) fill.classList.add('complete');
+  else if(pct < 50) fill.classList.add('low');
+}
+
 function renderSkTable(){
   const tbody = document.getElementById('skTableBody');
   const aspects = getSkAspects(skVendor);
@@ -1675,7 +1698,14 @@ function renderSkTable(){
       <td>${isNA ? '-' : `<input type="number" min="0" max="100" step="0.01" class="sk-nilai" data-no="${a.no}" value="${nilai}" placeholder="N/A">`}</td>
       <td class="sk-akhir" data-no-akhir="${a.no}">${isNA ? '-' : (nilai !== '' ? Number(nilai).toFixed(2) : '-')}</td>
     </tr>`;
-  }).join('') + `<tr><td colspan="2" class="sk-total">Total</td><td class="sk-total">${Math.round(aspects.reduce((s,a)=>s+a.bobot,0)*100)}%</td><td class="sk-total" colspan="3"></td></tr>`;
+  }).join('') + `<tr><td colspan="2" class="sk-total">Total</td><td class="sk-total">${Math.round(aspects.reduce((s,a)=>s+a.bobot,0)*100)}%</td><td class="sk-total" colspan="3">
+    <div class="sk-progress-wrap">
+      <div class="sk-progress-track"><div class="sk-progress-fill" id="skProgressFill"></div></div>
+      <span class="sk-progress-label" id="skProgressLabel">0%</span>
+    </div>
+  </td></tr>`;
+
+  updateSkProgress();
 
   tbody.querySelectorAll('.sk-nilai').forEach(inp => {
     inp.oninput = () => {
@@ -1690,6 +1720,7 @@ function renderSkTable(){
         if(akhirCell) akhirCell.textContent = v.toFixed(2);
       }
       renderSkResult();
+      updateSkProgress();
       scheduleSkSave();
     };
   });
