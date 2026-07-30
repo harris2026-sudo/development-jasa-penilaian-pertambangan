@@ -1249,6 +1249,7 @@ function renderRincian(){
       if(!rcData[vendor][aspekIdx]) rcData[vendor][aspekIdx] = {sudah:0,proses:0,belum:0,na:0};
       rcData[vendor][aspekIdx][field] = val;
       rcUpdateVendorTotal(vendor);
+      if(vendor === skVendor) updateSkProgress();
       scheduleRcSave();
     });
   });
@@ -1418,6 +1419,7 @@ async function rcApplyFreshToVendor(vendor, freshCounts){
     updated++;
   });
   if(updated > 0) await saveRcData();
+  if(vendor === skVendor) updateSkProgress();
   return updated;
 }
 async function rcSyncVendorFromSheet(vendor){
@@ -1670,13 +1672,17 @@ function updateSkProgress(){
   const fill = document.getElementById('skProgressFill');
   const label = document.getElementById('skProgressLabel');
   if(!fill || !label) return;
-  const aspects = getSkAspects(skVendor).filter(a => a.max !== 0);
-  const total = aspects.length;
-  const filled = aspects.filter(a => {
-    const v = skData.nilai[a.no];
-    return v !== undefined && v !== null && v !== '';
-  }).length;
-  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  const rows = rcData[skVendor] || [];
+  let sudah = 0, proses = 0, belum = 0;
+  rows.forEach((r, i) => {
+    if(rcIsInScope(skVendor, i) && r){
+      sudah += r.sudah || 0;
+      proses += r.proses || 0;
+      belum += r.belum || 0;
+    }
+  });
+  const totalItem = sudah + proses + belum;
+  const pct = totalItem > 0 ? Math.round((sudah / totalItem) * 100) : 0;
   fill.style.width = pct + '%';
   label.textContent = pct + '%';
   fill.classList.remove('complete','low');
