@@ -750,10 +750,12 @@ function orderformCsvUrl(){
    ============================================================ */
 const WA_NOTIF_ENABLED = true; // set false untuk mematikan notifikasi WA tanpa hapus konfigurasi
 const WA_RECIPIENTS = [
-  { name: "Harris", phone: "6281234567890" } // <-- WAJIB diisi nomor WA tujuan (62xxx, tanpa tanda +)
-  // Tambah baris lain kalau mau kirim ke nomor lain juga, contoh:
+  { name: "Harris", phone: "6282158107539" } // <-- WAJIB diisi nomor WA tujuan (62xxx, tanpa tanda +)
+  // Tambah baris lain kalau mau kirim ke nomor lain juga (mis. setelah tahap testing selesai), contoh:
   // { name: "Nico", phone: "62812xxxxxxx" },
 ];
+
+/* ============================================================\n   KONFIGURASI LOG RIWAYAT PENGIRIMAN WA (spreadsheet \"Fonnte\", TERPISAH\n   dari backend DCVA/APPS_SCRIPT_URL di atas). Setiap kali notifikasi WA\n   dicoba dikirim (baik notifikasi RFID baru maupun tombol \"Test Notif WA\"),\n   satu baris log (waktu, nama, nomor, isi pesan, status) otomatis ditambahkan\n   ke sheet ini - supaya Harris bisa audit riwayat pengiriman.\n\n   CARA AKTIFKAN (sekali saja, terpisah dari Apps Script DCVA):\n   1. Buka spreadsheet \"Fonnte\" ini:\n      https://docs.google.com/spreadsheets/d/1umllxyLjiowBFtQLOvl7CMOmr4wGw6y1bWM5Eumw7yw/edit\n   2. Extensions > Apps Script, lalu tempel kode dari file \"Code_FonnteLog.gs\"\n      (dibuatkan terpisah, lihat panduan yang diberikan bersama file ini).\n   3. Deploy > New deployment > Web app > Execute as: Me > Who has access: Anyone.\n   4. Copy URL Web App-nya (format: https://script.google.com/macros/s/XXXX/exec)\n   5. Paste ke FONNTE_LOG_URL di bawah ini, ganti nilai kosong \"\".\n\n   CATATAN: kegagalan logging TIDAK PERNAH menggagalkan pengiriman WA yang\n   sesungguhnya (fire-and-forget) - log ini murni pencatatan tambahan.\n   ============================================================ */\nconst FONNTE_LOG_URL = \"https://script.google.com/macros/s/AKfycbyJPCjVaNDUnY7Ku9qex1wR7p-RyZxdM0pAL-ONk9mz3MUt4jG13nYQeXWj63uYgLuaUA/exec\"; // <-- WAJIB diisi setelah deploy Apps Script log (lihat panduan di atas)\n\nfunction logWaHistory(entry){\n  if(!FONNTE_LOG_URL) return; // logging belum dikonfigurasi, lewati diam-diam\n  try{\n    const url = `${FONNTE_LOG_URL}?action=log`\n      + `&waktu=${encodeURIComponent(new Date().toLocaleString('id-ID'))}`\n      + `&nama=${encodeURIComponent(entry.name || '-')}`\n      + `&nomor=${encodeURIComponent(entry.phone || '-')}`\n      + `&pesan=${encodeURIComponent(entry.message || '-')}`\n      + `&status=${encodeURIComponent(entry.status || '-')}`\n      + `&keterangan=${encodeURIComponent(entry.detail || '')}`\n      + `&_t=${Date.now()}`;\n    fetch(url, { cache: 'no-store' }).catch(() => { /* log gagal tidak boleh mengganggu app */ });\n  }catch(e){ /* abaikan, logging bersifat best-effort */ }\n}
 
 function waFormatMessage(items){
   const head = `🔔 *DCVA - Pengajuan RFID Baru*\n${items.length} pengajuan baru masuk (Order Form):\n`;
@@ -783,9 +785,11 @@ async function sendWhatsAppNotif(items){
       const data = await res.json().catch(() => null);
       if(!data || !data.ok) console.warn(`Gagal kirim notif WA ke ${r.name} (via Fonnte/Apps Script):`, data);
       results.push({ name: r.name, ...(data || { ok: false }) });
+      logWaHistory({ name: r.name, phone: r.phone, message, status: (data && data.ok) ? 'Terkirim' : 'Gagal', detail: (data && data.message) ? data.message : (data ? JSON.stringify(data) : 'Tidak ada respons dari Apps Script') });
     }catch(e){
       console.warn(`Gagal kirim notif WA ke ${r.name}:`, e);
       results.push({ name: r.name, ok: false, error: String(e) });
+      logWaHistory({ name: r.name, phone: r.phone, message, status: 'Gagal', detail: String(e) });
     }
   }
   return results;
