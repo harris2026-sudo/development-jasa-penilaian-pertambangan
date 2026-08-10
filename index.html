@@ -56,6 +56,7 @@
   .tab:hover:not(.active){transform:translateY(-2px);background:var(--hilite);box-shadow:0 4px 10px rgba(31,56,100,.15);}
   .tab.active{background:linear-gradient(135deg,var(--navy),var(--accent));color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(31,56,100,.35);}
   .tab:active{transform:scale(.97);}
+  .tab-locked{opacity:.4;cursor:not-allowed;pointer-events:none;box-shadow:none;}
 
   .view{display:none;}
   .view.active{display:block;}
@@ -829,6 +830,16 @@
 </div>
 
 <script>
+/* ---------------- AKSES TERKUNCI VIA URL (?akses=mfs) ----------------
+   Link khusus untuk tim Monitoring Field Support: ...DCVA_v9_TaskList_OpenPoint.html?akses=mfs
+   Ketika parameter ini ada, app otomatis terkunci ke submenu Monitoring Field Support saja di
+   Checklist Harian, dan semua menu utama lain (Follow Up, Rekap, Roster, Task List, Open Point)
+   dinonaktifkan. Link TANPA parameter (atau ?akses=dfe) tetap berfungsi normal seperti biasa. */
+const LOCKED_ROLE = (() => {
+  const p = new URLSearchParams(window.location.search).get('akses');
+  return p === 'mfs' ? 'mfs' : null;
+})();
+
 /* ---- UI motion helper: count-up animation for summary numbers ---- */
 function animateCount(el, to){
   const target = Number(to) || 0;
@@ -1439,8 +1450,8 @@ const STRUCTURE_MFS = [
    Data untuk kedua role dipisah TOTAL: checklist tersimpan, riwayat, kategori/tugas custom, kategori/tugas
    yang disembunyikan, dan label custom -- masing-masing punya key penyimpanan sendiri (lihat roleSuffix()).
    Key untuk 'dfe' TIDAK diberi suffix supaya data lama (sebelum fitur ini ada) tetap terbaca. */
-let harianRole = 'dfe'; // 'dfe' | 'mfs'
-let STRUCTURE = STRUCTURE_DFE;
+let harianRole = LOCKED_ROLE || 'dfe'; // 'dfe' | 'mfs'
+let STRUCTURE = harianRole === 'mfs' ? STRUCTURE_MFS : STRUCTURE_DFE;
 function roleSuffix(){ return harianRole === 'mfs' ? '_mfs' : ''; }
 
 let taskIds = [];
@@ -2380,6 +2391,7 @@ loadRoster();
 /* ---------------- TAB SWITCHING ---------------- */
 document.querySelectorAll('.tab').forEach(tab => {
   tab.onclick = () => {
+    if(LOCKED_ROLE && tab.dataset.view !== 'harian') return; // menu lain dinonaktifkan saat akses terkunci
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -2391,6 +2403,11 @@ document.querySelectorAll('.tab').forEach(tab => {
     if(tab.dataset.view === 'openpoint') renderOpenPoint();
   };
 });
+if(LOCKED_ROLE){
+  document.querySelectorAll('.tab').forEach(t => {
+    if(t.dataset.view !== 'harian') t.classList.add('tab-locked');
+  });
+}
 
 /* ---------------- BUILD DAILY UI ---------------- */
 function renderTaskRow(body, id, taskText, displayNum, opts){
@@ -2744,8 +2761,12 @@ async function switchHarianRole(role){
   loadHistory();
 }
 document.querySelectorAll('.harian-role-tab').forEach(t => {
-  t.onclick = () => switchHarianRole(t.dataset.role);
+  t.onclick = () => { if(!LOCKED_ROLE) switchHarianRole(t.dataset.role); };
 });
+if(LOCKED_ROLE){
+  // Link akses terkunci: tidak ada gunanya menampilkan pilihan submenu, karena cuma satu yang boleh diakses.
+  document.getElementById('harianRoleTabs').style.display = 'none';
+}
 
 /* ================= REKAP ENGINE ================= */
 let rekapMode = 'week';
