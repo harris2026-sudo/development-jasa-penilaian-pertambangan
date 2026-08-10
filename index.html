@@ -515,22 +515,11 @@
       </div>
       <div>
         <label>Shift</label>
-        <select id="shiftInput">
-          <option>Shift 1</option>
-          <option>Shift 2</option>
-          <option>Shift 3</option>
-          <option>Non Shift</option>
-        </select>
+        <select id="shiftInput"></select>
       </div>
       <div class="grow">
         <label>PIC</label>
-        <select id="picInput" style="width:100%;">
-          <option>Harris</option>
-          <option>Nico Fahryan Sandy</option>
-          <option>Lukman Gunawan</option>
-          <option>Taufik Wirayudha</option>
-          <option>Adhe Setiawan</option>
-        </select>
+        <select id="picInput" style="width:100%;"></select>
       </div>
       <div style="align-self:flex-end;display:flex;gap:8px;">
         <button class="btn btn-ghost" id="resetBtn">Reset Hari Ini</button>
@@ -1454,6 +1443,27 @@ let harianRole = LOCKED_ROLE || 'dfe'; // 'dfe' | 'mfs'
 let STRUCTURE = harianRole === 'mfs' ? STRUCTURE_MFS : STRUCTURE_DFE;
 function roleSuffix(){ return harianRole === 'mfs' ? '_mfs' : ''; }
 
+/* ---------------- PIC & SHIFT: OPSI PER ROLE ---------------- */
+const PIC_OPTIONS_BY_ROLE = {
+  dfe: ["Harris", "Nico Fahryan Sandy", "Lukman Gunawan", "Taufik Wirayudha", "Adhe Setiawan"],
+  mfs: ["Ferdy", "Wahyu", "Muhammad Rizki Alamsyah"],
+};
+const SHIFT_OPTIONS_BY_ROLE = {
+  dfe: ["Shift 1", "Shift 2", "Shift 3", "Non Shift"],
+  mfs: ["Shift 1", "Shift 2"],
+};
+function defaultPicForRole(role){ return PIC_OPTIONS_BY_ROLE[role][0]; }
+function renderHarianControlOptions(){
+  const shiftSel = document.getElementById('shiftInput');
+  const picSel = document.getElementById('picInput');
+  const prevShift = shiftSel.value;
+  const prevPic = picSel.value;
+  shiftSel.innerHTML = SHIFT_OPTIONS_BY_ROLE[harianRole].map(s => `<option>${s}</option>`).join('');
+  picSel.innerHTML = PIC_OPTIONS_BY_ROLE[harianRole].map(p => `<option>${p}</option>`).join('');
+  shiftSel.value = SHIFT_OPTIONS_BY_ROLE[harianRole].includes(prevShift) ? prevShift : SHIFT_OPTIONS_BY_ROLE[harianRole][0];
+  picSel.value = PIC_OPTIONS_BY_ROLE[harianRole].includes(prevPic) ? prevPic : defaultPicForRole(harianRole);
+}
+
 let taskIds = [];
 let taskTextMap = {};
 function rebuildTaskIndex(){
@@ -1626,7 +1636,7 @@ async function restoreHiddenCategories(){
 
 rebuildTaskIndex();
 
-let currentData = { status: {}, notes: {}, shift: "Shift 1", pic: "Harris" };
+let currentData = { status: {}, notes: {}, shift: SHIFT_OPTIONS_BY_ROLE[harianRole][0], pic: defaultPicForRole(harianRole) };
 let saveTimer = null;
 let loadRequestSeq = 0; // guard: cegah response fetch tanggal lama menimpa tampilan tanggal baru
 
@@ -2655,24 +2665,24 @@ async function saveCurrent(){
   }
 }
 async function loadForDate(dateStr, shiftLabel){
-  const shift = shiftLabel || document.getElementById('shiftInput').value || "Shift 1";
+  const shift = shiftLabel || document.getElementById('shiftInput').value || SHIFT_OPTIONS_BY_ROLE[harianRole][0];
   const mySeq = ++loadRequestSeq;
   // Langsung kosongkan tampilan dulu (jangan biarkan checklist tanggal/shift lama masih terlihat
   // selagi menunggu fetch tanggal+shift baru selesai) supaya tidak kelihatan seperti "history kebawa".
-  currentData = { status:{}, notes:{}, shift: shift, pic: currentData.pic || "Harris" };
+  currentData = { status:{}, notes:{}, shift: shift, pic: currentData.pic || defaultPicForRole(harianRole) };
   refreshStatusButtons(); refreshNotes(); refreshSummary();
   document.getElementById('saveStatus').textContent = 'Memuat data...';
   document.getElementById('saveStatus').classList.remove('saved','error');
   try{
     const res = await store.get(keyFor(dateStr, shift));
     if(mySeq !== loadRequestSeq) return; // ada request tanggal/shift lain yang lebih baru, abaikan hasil ini
-    currentData = (res && res.value) ? JSON.parse(res.value) : { status:{}, notes:{}, shift:shift, pic:"Harris" };
+    currentData = (res && res.value) ? JSON.parse(res.value) : { status:{}, notes:{}, shift:shift, pic:defaultPicForRole(harianRole) };
   }catch(e){
     if(mySeq !== loadRequestSeq) return;
-    currentData = { status:{}, notes:{}, shift:shift, pic:"Harris" };
+    currentData = { status:{}, notes:{}, shift:shift, pic:defaultPicForRole(harianRole) };
   }
   document.getElementById('shiftInput').value = currentData.shift || shift;
-  document.getElementById('picInput').value = currentData.pic || "Harris";
+  document.getElementById('picInput').value = currentData.pic || defaultPicForRole(harianRole);
   refreshStatusButtons(); refreshNotes(); refreshSummary();
   document.getElementById('saveStatus').textContent = 'Data dimuat';
   document.getElementById('saveStatus').classList.remove('saved','error');
@@ -2750,6 +2760,7 @@ async function switchHarianRole(role){
   harianRole = role;
   STRUCTURE = role === 'mfs' ? STRUCTURE_MFS : STRUCTURE_DFE;
   document.querySelectorAll('.harian-role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === role));
+  renderHarianControlOptions();
   await loadStructureLabels();
   await loadCustomTasks();
   await loadHiddenState();
@@ -4299,6 +4310,7 @@ if(rekapFuDebugToggleBtn){
 }
 
 document.getElementById('dateInput').value = todayStr();
+renderHarianControlOptions();
 (async () => {
   await loadStructureLabels();
   await loadCustomTasks();
